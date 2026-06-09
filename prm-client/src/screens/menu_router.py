@@ -1,0 +1,53 @@
+"""Menu router — dispatches to the correct role-specific main menu."""
+
+from __future__ import annotations
+
+from src.api.client import session
+from src.utils.display import console, print_error
+
+
+def route() -> None:
+    """
+    Route the authenticated user to the appropriate menu based on their role.
+
+    Sprint 1: Only the ADMIN role has a real menu stub. Other roles show a
+    placeholder and exit. Full menus are implemented in later sprints.
+    """
+    if not session.is_authenticated or session.role is None:
+        print_error("Not authenticated. Please log in first.")
+        return
+
+    role = session.role.upper()
+
+    if role == "ADMIN":
+        _show_admin_menu()
+    elif role == "MANAGER":
+        _show_manager_menu()
+    elif role == "EMPLOYEE":
+        _show_employee_menu()
+    else:
+        print_error(f"Unknown role: {role}")
+
+
+def _show_admin_menu() -> None:
+    console.rule("[bold cyan]Admin Menu[/bold cyan]")
+    console.print(
+        "[dim]Admin features will be available in Sprint 2. Press Enter to exit.[/dim]"
+    )
+    input()
+
+
+def _show_manager_menu() -> None:
+    console.rule("[bold cyan]Manager Menu[/bold cyan]")
+    console.print(
+        "[dim]Manager features will be available in a future sprint. Press Enter to exit.[/dim]"
+    )
+    input()
+
+
+def _show_employee_menu() -> None:
+    console.rule("[bold cyan]Employee Menu[/bold cyan]")
+    console.print(
+        "[dim]Employee features will be available in a future sprint. Press Enter to exit.[/dim]"
+    )
+    input()
