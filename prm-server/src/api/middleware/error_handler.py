@@ -6,6 +6,7 @@ from src.domain.exceptions import (
     CannotDeactivateSelfError,
     DomainException,
     DuplicateEmailError,
+    DuplicateProjectNameError,
     DuplicateSkillError,
     DuplicateUsernameError,
     EmployeeAlreadyExistsError,
@@ -13,6 +14,9 @@ from src.domain.exceptions import (
     InactiveUserError,
     InvalidCredentialsError,
     InvalidManagerError,
+    InvalidProjectManagerError,
+    MilestoneNotFoundError,
+    ProjectNotFoundError,
     SkillNotFoundError,
     UserNotFoundError,
     WeakPasswordError,
@@ -174,6 +178,54 @@ def register_exception_handlers(app: FastAPI) -> None:
             content={
                 "success": False,
                 "error": {"code": "CANNOT_DEACTIVATE_SELF", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(ProjectNotFoundError)
+    async def handle_project_not_found(
+        request: Request, exc: ProjectNotFoundError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "success": False,
+                "error": {"code": "PROJECT_NOT_FOUND", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(MilestoneNotFoundError)
+    async def handle_milestone_not_found(
+        request: Request, exc: MilestoneNotFoundError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "success": False,
+                "error": {"code": "MILESTONE_NOT_FOUND", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(DuplicateProjectNameError)
+    async def handle_duplicate_project_name(
+        request: Request, exc: DuplicateProjectNameError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "success": False,
+                "error": {"code": "DUPLICATE_PROJECT_NAME", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(InvalidProjectManagerError)
+    async def handle_invalid_project_manager(
+        request: Request, exc: InvalidProjectManagerError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "error": {"code": "INVALID_PROJECT_MANAGER", "message": str(exc)},
             },
         )
 
