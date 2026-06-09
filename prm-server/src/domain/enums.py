@@ -33,5 +33,10 @@ class MilestoneStatus(str, Enum):
     CANCELLED = "CANCELLED"
 
 
+class AllocationStatus(str, Enum):
+    ACTIVE = "ACTIVE"
+    ENDED = "ENDED"
+
+
 # Additional enums added in future sprints:
 # SkillCategory, TimesheetStatus, ProjectHealthStatus, AIRequestType

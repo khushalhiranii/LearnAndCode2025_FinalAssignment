@@ -1,11 +1,13 @@
 from abc import ABC, abstractmethod
+from datetime import date
 
+from src.domain.entities.allocation import Allocation
 from src.domain.entities.employee import Employee
 from src.domain.entities.milestone import Milestone
 from src.domain.entities.project import Project
 from src.domain.entities.skill import EmployeeSkill, Skill
 from src.domain.entities.user import User
-from src.domain.enums import MilestoneStatus, ProficiencyLevel, ProjectStatus, Role
+from src.domain.enums import AllocationStatus, MilestoneStatus, ProficiencyLevel, ProjectStatus, Role
 
 
 class IUserRepository(ABC):
@@ -104,6 +106,11 @@ class IEmployeeRepository(ABC):
     @abstractmethod
     async def remove_skill(self, employee_skill_id: int) -> None: ...
 
+    @abstractmethod
+    async def find_by_manager(self, manager_user_id: int) -> list[Employee]:
+        """Return all active employees whose manager_user_id matches."""
+        ...
+
 
 class ISkillRepository(ABC):
 
@@ -118,6 +125,41 @@ class ISkillRepository(ABC):
 
     @abstractmethod
     async def save(self, skill: Skill) -> Skill: ...
+
+
+class IAllocationRepository(ABC):
+
+    @abstractmethod
+    async def find_by_id(self, allocation_id: int) -> Allocation | None: ...
+
+    @abstractmethod
+    async def find_active_by_employee(self, employee_id: int) -> list[Allocation]:
+        """Return all ACTIVE allocations for this employee."""
+        ...
+
+    @abstractmethod
+    async def find_by_project(
+        self,
+        project_id: int,
+        active_only: bool = False,
+    ) -> list[Allocation]:
+        """Return allocations for a project; set active_only=True to filter."""
+        ...
+
+    @abstractmethod
+    async def find_by_employee(
+        self,
+        employee_id: int,
+        active_only: bool = False,
+    ) -> list[Allocation]: ...
+
+    @abstractmethod
+    async def save(self, allocation: Allocation) -> Allocation: ...
+
+    @abstractmethod
+    async def end_allocation(self, allocation_id: int, ended_at: date) -> None:
+        """Set status=ENDED and to_date=ended_at."""
+        ...
 
 
 class IProjectRepository(ABC):

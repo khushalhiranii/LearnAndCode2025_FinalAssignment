@@ -80,3 +80,25 @@ class MilestoneNotFoundError(DomainException):
 
 class InvalidProjectManagerError(DomainException):
     """The assigned manager is invalid (wrong role, inactive, or not found)."""
+
+
+# --- Sprint 4 additions ---
+
+class AllocationNotFoundError(DomainException):
+    """No allocation found for the given identifier."""
+
+
+class AllocationOverlapError(DomainException):
+    """Adding this allocation would push the employee's utilization above 100%."""
+
+
+class AllocationAlreadyEndedError(DomainException):
+    """Cannot end an allocation that is already ended."""
+
+
+class InvalidAllocationDateError(DomainException):
+    """Allocation date range is invalid (from_date must be before to_date)."""
+
+
+class ProjectNotActiveError(DomainException):
+    """Allocations can only be made to projects with ACTIVE status."""
