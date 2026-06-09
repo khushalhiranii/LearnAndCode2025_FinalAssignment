@@ -10,13 +10,15 @@ from datetime import datetime, timezone
 import pytest
 import pytest_asyncio
 
+from src.domain.entities.employee import Employee
+from src.domain.entities.skill import EmployeeSkill, Skill
 from src.domain.entities.user import User
-from src.domain.enums import Role
-from src.domain.ports.repositories import IUserRepository
+from src.domain.enums import ProficiencyLevel, Role
+from src.domain.ports.repositories import IEmployeeRepository, ISkillRepository, IUserRepository
 from src.infrastructure.security.password_hasher import hash_password
 
 
-# ── In-memory fake repository (unit tests) ───────────────────────────────────
+# ── In-memory fake repositories (unit tests) ─────────────────────────────────
 
 
 class InMemoryUserRepository(IUserRepository):
@@ -25,6 +27,7 @@ class InMemoryUserRepository(IUserRepository):
     def __init__(self) -> None:
         self._store: dict[int, User] = {}
         self._by_username: dict[str, int] = {}
+        self._by_email: dict[str, int] = {}
         self._next_id = 1
 
     async def find_by_username(self, username: str) -> User | None:
@@ -38,8 +41,12 @@ class InMemoryUserRepository(IUserRepository):
         if user.id is None:
             user.id = self._next_id
             self._next_id += 1
+        else:
+            # Advance counter so auto-assigned IDs don't collide with pre-set ones
+            self._next_id = max(self._next_id, user.id + 1)
         self._store[user.id] = user
         self._by_username[user.username] = user.id
+        self._by_email[user.email] = user.id
         return user
 
     async def update_password(
@@ -51,6 +58,152 @@ class InMemoryUserRepository(IUserRepository):
         user = self._store[user_id]
         user.password_hash = new_password_hash
         user.force_password_change = force_password_change
+
+    async def find_all(
+        self,
+        role: Role | None = None,
+        is_active: bool | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[User], int]:
+        users = list(self._store.values())
+        if role is not None:
+            users = [u for u in users if u.role == role]
+        if is_active is not None:
+            users = [u for u in users if u.is_active == is_active]
+        total = len(users)
+        start = (page - 1) * page_size
+        return users[start: start + page_size], total
+
+    async def find_by_email(self, email: str) -> User | None:
+        uid = self._by_email.get(email)
+        return self._store.get(uid) if uid else None
+
+    async def update_active(self, user_id: int, is_active: bool) -> None:
+        if user_id in self._store:
+            self._store[user_id].is_active = is_active
+
+
+class InMemoryEmployeeRepository(IEmployeeRepository):
+    """Fake employee repository for unit tests."""
+
+    def __init__(self) -> None:
+        self._store: dict[int, Employee] = {}
+        self._by_user: dict[int, int] = {}
+        self._skills: dict[int, EmployeeSkill] = {}  # employee_skill_id → EmployeeSkill
+        self._next_id = 1
+        self._next_skill_id = 1
+
+    async def find_by_id(self, employee_id: int) -> Employee | None:
+        return self._store.get(employee_id)
+
+    async def find_by_user_id(self, user_id: int) -> Employee | None:
+        eid = self._by_user.get(user_id)
+        return self._store.get(eid) if eid else None
+
+    async def find_all(
+        self,
+        is_active: bool | None = None,
+        manager_user_id: int | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[Employee], int]:
+        items = list(self._store.values())
+        if is_active is not None:
+            items = [e for e in items if e.is_active == is_active]
+        if manager_user_id is not None:
+            items = [e for e in items if e.manager_user_id == manager_user_id]
+        total = len(items)
+        start = (page - 1) * page_size
+        return items[start: start + page_size], total
+
+    async def save(self, employee: Employee) -> Employee:
+        if employee.id is None:
+            employee.id = self._next_id
+            self._next_id += 1
+        self._store[employee.id] = employee
+        self._by_user[employee.user_id] = employee.id
+        return employee
+
+    async def update_active(self, employee_id: int, is_active: bool) -> None:
+        if employee_id in self._store:
+            self._store[employee_id].is_active = is_active
+
+    async def update_manager(
+        self, employee_id: int, manager_user_id: int | None
+    ) -> None:
+        if employee_id in self._store:
+            self._store[employee_id].manager_user_id = manager_user_id
+
+    async def find_skills(self, employee_id: int) -> list[EmployeeSkill]:
+        return [s for s in self._skills.values() if s.employee_id == employee_id]
+
+    async def find_employee_skill(
+        self, employee_id: int, skill_id: int
+    ) -> EmployeeSkill | None:
+        for s in self._skills.values():
+            if s.employee_id == employee_id and s.skill_id == skill_id:
+                return s
+        return None
+
+    async def add_skill(
+        self,
+        employee_id: int,
+        skill_id: int,
+        proficiency: ProficiencyLevel,
+    ) -> EmployeeSkill:
+        now = datetime.now(timezone.utc)
+        emp_skill = EmployeeSkill(
+            id=self._next_skill_id,
+            employee_id=employee_id,
+            skill_id=skill_id,
+            skill_name="",
+            proficiency=proficiency,
+            created_at=now,
+            updated_at=now,
+        )
+        self._skills[self._next_skill_id] = emp_skill
+        self._next_skill_id += 1
+        return emp_skill
+
+    async def update_skill_proficiency(
+        self, employee_skill_id: int, proficiency: ProficiencyLevel
+    ) -> None:
+        if employee_skill_id in self._skills:
+            self._skills[employee_skill_id].proficiency = proficiency
+
+    async def remove_skill(self, employee_skill_id: int) -> None:
+        self._skills.pop(employee_skill_id, None)
+
+
+class InMemorySkillRepository(ISkillRepository):
+    """Fake skill repository for unit tests."""
+
+    def __init__(self) -> None:
+        self._store: dict[int, Skill] = {}
+        self._by_name: dict[str, int] = {}
+        self._next_id = 1
+
+    async def find_by_id(self, skill_id: int) -> Skill | None:
+        return self._store.get(skill_id)
+
+    async def find_all(self) -> list[Skill]:
+        return sorted(self._store.values(), key=lambda s: s.name)
+
+    async def find_by_name(self, name: str) -> Skill | None:
+        sid = self._by_name.get(name)
+        return self._store.get(sid) if sid else None
+
+    async def save(self, skill: Skill) -> Skill:
+        if skill.id is None:
+            skill.id = self._next_id
+            self._next_id += 1
+        self._store[skill.id] = skill
+        self._by_name[skill.name] = skill.id
+        return skill
+
+
+# ── helpers ───────────────────────────────────────────────────────────────────
 
 
 def make_admin_user(
@@ -72,9 +225,31 @@ def make_admin_user(
     )
 
 
+def make_skill(
+    skill_id: int = 1,
+    name: str = "Python",
+    category: str = "Technical",
+) -> Skill:
+    now = datetime.now(timezone.utc)
+    return Skill(id=skill_id, name=name, category=category, created_at=now, updated_at=now)
+
+
+# ── fixtures ──────────────────────────────────────────────────────────────────
+
+
 @pytest.fixture
 def fake_user_repo() -> InMemoryUserRepository:
     return InMemoryUserRepository()
+
+
+@pytest.fixture
+def fake_employee_repo() -> InMemoryEmployeeRepository:
+    return InMemoryEmployeeRepository()
+
+
+@pytest.fixture
+def fake_skill_repo() -> InMemorySkillRepository:
+    return InMemorySkillRepository()
 
 
 @pytest_asyncio.fixture
