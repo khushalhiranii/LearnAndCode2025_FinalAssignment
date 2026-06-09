@@ -7,12 +7,7 @@ from src.utils.display import console, print_error
 
 
 def route() -> None:
-    """
-    Route the authenticated user to the appropriate menu based on their role.
-
-    Sprint 1: Only the ADMIN role has a real menu stub. Other roles show a
-    placeholder and exit. Full menus are implemented in later sprints.
-    """
+    """Route the authenticated user to the appropriate menu based on their role."""
     if not session.is_authenticated or session.role is None:
         print_error("Not authenticated. Please log in first.")
         return
@@ -30,11 +25,8 @@ def route() -> None:
 
 
 def _show_admin_menu() -> None:
-    console.rule("[bold cyan]Admin Menu[/bold cyan]")
-    console.print(
-        "[dim]Admin features will be available in Sprint 2. Press Enter to exit.[/dim]"
-    )
-    input()
+    from src.screens.admin.menu import admin_menu
+    admin_menu()
 
 
 def _show_manager_menu() -> None:
