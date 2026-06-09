@@ -62,3 +62,21 @@ class DuplicateUsernameError(DomainException):
 
 class DuplicateEmailError(DomainException):
     """A user with this email already exists."""
+
+
+# --- Sprint 3 additions ---
+
+class ProjectNotFoundError(DomainException):
+    """No project found for the given identifier."""
+
+
+class DuplicateProjectNameError(DomainException):
+    """A project with this name already exists."""
+
+
+class MilestoneNotFoundError(DomainException):
+    """No milestone found for the given identifier."""
+
+
+class InvalidProjectManagerError(DomainException):
+    """The assigned manager is invalid (wrong role, inactive, or not found)."""

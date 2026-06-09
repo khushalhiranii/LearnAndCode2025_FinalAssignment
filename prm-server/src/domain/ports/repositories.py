@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
 
 from src.domain.entities.employee import Employee
+from src.domain.entities.milestone import Milestone
+from src.domain.entities.project import Project
 from src.domain.entities.skill import EmployeeSkill, Skill
 from src.domain.entities.user import User
-from src.domain.enums import ProficiencyLevel, Role
+from src.domain.enums import MilestoneStatus, ProficiencyLevel, ProjectStatus, Role
 
 
 class IUserRepository(ABC):
@@ -116,3 +118,52 @@ class ISkillRepository(ABC):
 
     @abstractmethod
     async def save(self, skill: Skill) -> Skill: ...
+
+
+class IProjectRepository(ABC):
+
+    @abstractmethod
+    async def find_by_id(self, project_id: int) -> Project | None: ...
+
+    @abstractmethod
+    async def find_all(
+        self,
+        status: ProjectStatus | None = None,
+        manager_user_id: int | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[Project], int]: ...
+
+    @abstractmethod
+    async def find_by_name(self, name: str) -> Project | None: ...
+
+    @abstractmethod
+    async def save(self, project: Project) -> Project: ...
+
+    @abstractmethod
+    async def update_status(self, project_id: int, status: ProjectStatus) -> None: ...
+
+    @abstractmethod
+    async def update_completed_points(self, project_id: int, points: int) -> None: ...
+
+
+class IMilestoneRepository(ABC):
+
+    @abstractmethod
+    async def find_by_id(self, milestone_id: int) -> Milestone | None: ...
+
+    @abstractmethod
+    async def find_by_project(self, project_id: int) -> list[Milestone]: ...
+
+    @abstractmethod
+    async def save(self, milestone: Milestone) -> Milestone: ...
+
+    @abstractmethod
+    async def update_status(
+        self, milestone_id: int, status: MilestoneStatus
+    ) -> None: ...
+
+    @abstractmethod
+    async def sum_done_story_points(self, project_id: int) -> int:
+        """Return the sum of story_points for all DONE milestones in this project."""
+        ...

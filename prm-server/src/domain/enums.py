@@ -18,6 +18,20 @@ class ProficiencyLevel(str, Enum):
     EXPERT = "EXPERT"
 
 
+class ProjectStatus(str, Enum):
+    PLANNED = "PLANNED"
+    ACTIVE = "ACTIVE"
+    ON_HOLD = "ON_HOLD"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+
+class MilestoneStatus(str, Enum):
+    PENDING = "PENDING"
+    IN_PROGRESS = "IN_PROGRESS"
+    DONE = "DONE"
+    CANCELLED = "CANCELLED"
+
+
 # Additional enums added in future sprints:
-# ProjectStatus, MilestoneStatus, SkillCategory, TimesheetStatus,
-# ProjectHealthStatus, AIRequestType
+# SkillCategory, TimesheetStatus, ProjectHealthStatus, AIRequestType
