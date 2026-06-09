@@ -80,3 +80,42 @@ class SQLAlchemyUserRepository(IUserRepository):
                 force_password_change=force_password_change,
             )
         )
+
+    async def find_all(
+        self,
+        role: "Role | None" = None,
+        is_active: "bool | None" = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> "tuple[list[User], int]":
+        from sqlalchemy import func
+
+        q = select(UserModel)
+        if role is not None:
+            q = q.where(UserModel.role == role.value)
+        if is_active is not None:
+            q = q.where(UserModel.is_active == is_active)
+
+        count_result = await self._session.execute(
+            select(func.count()).select_from(q.subquery())
+        )
+        total = count_result.scalar_one()
+
+        q = q.offset((page - 1) * page_size).limit(page_size)
+        rows = (await self._session.execute(q)).scalars().all()
+        return [self._to_entity(m) for m in rows], total
+
+    async def find_by_email(self, email: str) -> "User | None":
+        result = await self._session.execute(
+            select(UserModel).where(UserModel.email == email)
+        )
+        model = result.scalar_one_or_none()
+        return self._to_entity(model) if model else None
+
+    async def update_active(self, user_id: int, is_active: bool) -> None:
+        from datetime import datetime, timezone
+        await self._session.execute(
+            update(UserModel)
+            .where(UserModel.id == user_id)
+            .values(is_active=is_active, updated_at=datetime.now(timezone.utc))
+        )
