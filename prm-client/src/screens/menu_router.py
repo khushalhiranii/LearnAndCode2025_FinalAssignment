@@ -30,11 +30,8 @@ def _show_admin_menu() -> None:
 
 
 def _show_manager_menu() -> None:
-    console.rule("[bold cyan]Manager Menu[/bold cyan]")
-    console.print(
-        "[dim]Manager features will be available in a future sprint. Press Enter to exit.[/dim]"
-    )
-    input()
+    from src.screens.manager.menu import manager_menu
+    manager_menu()
 
 
 def _show_employee_menu() -> None:
