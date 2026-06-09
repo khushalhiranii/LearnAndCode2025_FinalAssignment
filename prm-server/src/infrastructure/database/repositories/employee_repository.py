@@ -185,3 +185,12 @@ class SQLAlchemyEmployeeRepository(IEmployeeRepository):
         model = result.scalar_one_or_none()
         if model:
             await self._session.delete(model)
+
+    async def find_by_manager(self, manager_user_id: int) -> list[Employee]:
+        result = await self._session.execute(
+            select(EmployeeModel).where(
+                EmployeeModel.manager_user_id == manager_user_id,
+                EmployeeModel.is_active == True,  # noqa: E712
+            )
+        )
+        return [self._to_entity(m) for m in result.scalars().all()]

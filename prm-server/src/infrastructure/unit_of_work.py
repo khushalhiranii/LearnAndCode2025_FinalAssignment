@@ -5,6 +5,7 @@ from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.domain.ports.repositories import (
+    IAllocationRepository,
     IEmployeeRepository,
     IMilestoneRepository,
     IProjectRepository,
@@ -12,6 +13,7 @@ from src.domain.ports.repositories import (
     IUserRepository,
 )
 from src.infrastructure.database.engine import async_session_factory
+from src.infrastructure.database.repositories.allocation_repository import SQLAlchemyAllocationRepository
 from src.infrastructure.database.repositories.employee_repository import SQLAlchemyEmployeeRepository
 from src.infrastructure.database.repositories.milestone_repository import SQLAlchemyMilestoneRepository
 from src.infrastructure.database.repositories.project_repository import SQLAlchemyProjectRepository
@@ -29,6 +31,7 @@ class UnitOfWork:
         self.skills: ISkillRepository = SQLAlchemySkillRepository(session)
         self.projects: IProjectRepository = SQLAlchemyProjectRepository(session)
         self.milestones: IMilestoneRepository = SQLAlchemyMilestoneRepository(session)
+        self.allocations: IAllocationRepository = SQLAlchemyAllocationRepository(session)
 
     async def commit(self) -> None:
         await self._session.commit()
