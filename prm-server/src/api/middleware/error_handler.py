@@ -3,9 +3,17 @@ from fastapi.responses import JSONResponse
 
 from src.domain.exceptions import (
     AuthorizationError,
+    CannotDeactivateSelfError,
     DomainException,
+    DuplicateEmailError,
+    DuplicateSkillError,
+    DuplicateUsernameError,
+    EmployeeAlreadyExistsError,
+    EmployeeNotFoundError,
     InactiveUserError,
     InvalidCredentialsError,
+    InvalidManagerError,
+    SkillNotFoundError,
     UserNotFoundError,
     WeakPasswordError,
 )
@@ -70,6 +78,102 @@ def register_exception_handlers(app: FastAPI) -> None:
             content={
                 "success": False,
                 "error": {"code": "WEAK_PASSWORD", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(EmployeeNotFoundError)
+    async def handle_employee_not_found(
+        request: Request, exc: EmployeeNotFoundError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "success": False,
+                "error": {"code": "EMPLOYEE_NOT_FOUND", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(SkillNotFoundError)
+    async def handle_skill_not_found(
+        request: Request, exc: SkillNotFoundError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "success": False,
+                "error": {"code": "SKILL_NOT_FOUND", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(DuplicateUsernameError)
+    async def handle_duplicate_username(
+        request: Request, exc: DuplicateUsernameError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "success": False,
+                "error": {"code": "DUPLICATE_USERNAME", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(DuplicateEmailError)
+    async def handle_duplicate_email(
+        request: Request, exc: DuplicateEmailError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "success": False,
+                "error": {"code": "DUPLICATE_EMAIL", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(DuplicateSkillError)
+    async def handle_duplicate_skill(
+        request: Request, exc: DuplicateSkillError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "success": False,
+                "error": {"code": "DUPLICATE_SKILL", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(EmployeeAlreadyExistsError)
+    async def handle_employee_already_exists(
+        request: Request, exc: EmployeeAlreadyExistsError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "success": False,
+                "error": {"code": "EMPLOYEE_ALREADY_EXISTS", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(InvalidManagerError)
+    async def handle_invalid_manager(
+        request: Request, exc: InvalidManagerError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "error": {"code": "INVALID_MANAGER", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(CannotDeactivateSelfError)
+    async def handle_cannot_deactivate_self(
+        request: Request, exc: CannotDeactivateSelfError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "error": {"code": "CANNOT_DEACTIVATE_SELF", "message": str(exc)},
             },
         )
 

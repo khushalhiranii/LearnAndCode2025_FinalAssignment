@@ -7,6 +7,8 @@ from fastapi import FastAPI
 from src.api.middleware.error_handler import register_exception_handlers
 from src.api.routers.auth_router import router as auth_router
 from src.api.routers.health_router import router as health_router
+from src.api.routers.user_router import router as user_router
+from src.api.routers.employee_router import router as employee_router
 from src.config import settings
 from src.infrastructure.database.engine import engine
 
@@ -33,3 +35,5 @@ register_exception_handlers(app)
 
 app.include_router(auth_router)
 app.include_router(health_router)
+app.include_router(user_router)
+app.include_router(employee_router)
