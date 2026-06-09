@@ -11,12 +11,14 @@ import pytest
 import pytest_asyncio
 
 from src.domain.entities.employee import Employee
+from src.domain.entities.allocation import Allocation
 from src.domain.entities.milestone import Milestone
 from src.domain.entities.project import Project
 from src.domain.entities.skill import EmployeeSkill, Skill
 from src.domain.entities.user import User
-from src.domain.enums import MilestoneStatus, ProficiencyLevel, ProjectStatus, Role
+from src.domain.enums import AllocationStatus, MilestoneStatus, ProficiencyLevel, ProjectStatus, Role
 from src.domain.ports.repositories import (
+    IAllocationRepository,
     IEmployeeRepository,
     IMilestoneRepository,
     IProjectRepository,
@@ -182,6 +184,12 @@ class InMemoryEmployeeRepository(IEmployeeRepository):
 
     async def remove_skill(self, employee_skill_id: int) -> None:
         self._skills.pop(employee_skill_id, None)
+
+    async def find_by_manager(self, manager_user_id: int) -> list[Employee]:
+        return [
+            e for e in self._store.values()
+            if e.manager_user_id == manager_user_id and e.is_active
+        ]
 
 
 class InMemorySkillRepository(ISkillRepository):
@@ -404,6 +412,91 @@ def fake_project_repo() -> InMemoryProjectRepository:
 @pytest.fixture
 def fake_milestone_repo() -> InMemoryMilestoneRepository:
     return InMemoryMilestoneRepository()
+
+
+# ── InMemoryAllocationRepository ──────────────────────────────────────────────
+
+
+class InMemoryAllocationRepository(IAllocationRepository):
+
+    def __init__(self) -> None:
+        self._store: dict[int, Allocation] = {}
+        self._next_id = 1
+
+    async def find_by_id(self, allocation_id: int) -> Allocation | None:
+        return self._store.get(allocation_id)
+
+    async def find_active_by_employee(self, employee_id: int) -> list[Allocation]:
+        return [
+            a for a in self._store.values()
+            if a.employee_id == employee_id and a.status == AllocationStatus.ACTIVE
+        ]
+
+    async def find_by_project(
+        self,
+        project_id: int,
+        active_only: bool = False,
+    ) -> list[Allocation]:
+        result = [a for a in self._store.values() if a.project_id == project_id]
+        if active_only:
+            result = [a for a in result if a.status == AllocationStatus.ACTIVE]
+        return result
+
+    async def find_by_employee(
+        self,
+        employee_id: int,
+        active_only: bool = False,
+    ) -> list[Allocation]:
+        result = [a for a in self._store.values() if a.employee_id == employee_id]
+        if active_only:
+            result = [a for a in result if a.status == AllocationStatus.ACTIVE]
+        return result
+
+    async def save(self, allocation: Allocation) -> Allocation:
+        if allocation.id is None:
+            allocation.id = self._next_id
+            self._next_id += 1
+        else:
+            self._next_id = max(self._next_id, allocation.id + 1)
+        self._store[allocation.id] = allocation
+        return allocation
+
+    async def end_allocation(self, allocation_id: int, ended_at) -> None:
+        if allocation_id in self._store:
+            a = self._store[allocation_id]
+            a.status = AllocationStatus.ENDED
+            a.to_date = ended_at
+            a.updated_at = datetime.now(timezone.utc)
+
+
+# ── Factory helpers ───────────────────────────────────────────────────────────
+
+
+def make_allocation(
+    allocation_id: int = 1,
+    employee_id: int = 10,
+    project_id: int = 1,
+    utilization_percent: int = 50,
+    status: AllocationStatus = AllocationStatus.ACTIVE,
+) -> Allocation:
+    from datetime import date
+    now = datetime.now(timezone.utc)
+    return Allocation(
+        id=allocation_id,
+        employee_id=employee_id,
+        project_id=project_id,
+        utilization_percent=utilization_percent,
+        from_date=date(2026, 1, 1),
+        to_date=date(2026, 12, 31),
+        status=status,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+@pytest.fixture
+def fake_allocation_repo() -> InMemoryAllocationRepository:
+    return InMemoryAllocationRepository()
 
 
 @pytest_asyncio.fixture
