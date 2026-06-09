@@ -11,10 +11,18 @@ import pytest
 import pytest_asyncio
 
 from src.domain.entities.employee import Employee
+from src.domain.entities.milestone import Milestone
+from src.domain.entities.project import Project
 from src.domain.entities.skill import EmployeeSkill, Skill
 from src.domain.entities.user import User
-from src.domain.enums import ProficiencyLevel, Role
-from src.domain.ports.repositories import IEmployeeRepository, ISkillRepository, IUserRepository
+from src.domain.enums import MilestoneStatus, ProficiencyLevel, ProjectStatus, Role
+from src.domain.ports.repositories import (
+    IEmployeeRepository,
+    IMilestoneRepository,
+    IProjectRepository,
+    ISkillRepository,
+    IUserRepository,
+)
 from src.infrastructure.security.password_hasher import hash_password
 
 
@@ -250,6 +258,152 @@ def fake_employee_repo() -> InMemoryEmployeeRepository:
 @pytest.fixture
 def fake_skill_repo() -> InMemorySkillRepository:
     return InMemorySkillRepository()
+
+
+# ── InMemoryProjectRepository ─────────────────────────────────────────────────
+
+
+class InMemoryProjectRepository(IProjectRepository):
+
+    def __init__(self) -> None:
+        self._store: dict[int, Project] = {}
+        self._next_id = 1
+
+    async def find_by_id(self, project_id: int) -> Project | None:
+        return self._store.get(project_id)
+
+    async def find_all(
+        self,
+        status: ProjectStatus | None = None,
+        manager_user_id: int | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[Project], int]:
+        items = list(self._store.values())
+        if status is not None:
+            items = [p for p in items if p.status == status]
+        if manager_user_id is not None:
+            items = [p for p in items if p.manager_user_id == manager_user_id]
+        total = len(items)
+        start = (page - 1) * page_size
+        return items[start : start + page_size], total
+
+    async def find_by_name(self, name: str) -> Project | None:
+        for p in self._store.values():
+            if p.name == name:
+                return p
+        return None
+
+    async def save(self, project: Project) -> Project:
+        if project.id is None:
+            project.id = self._next_id
+            self._next_id += 1
+        else:
+            self._next_id = max(self._next_id, project.id + 1)
+        self._store[project.id] = project
+        return project
+
+    async def update_status(self, project_id: int, status: ProjectStatus) -> None:
+        if project_id in self._store:
+            self._store[project_id].status = status
+
+    async def update_completed_points(self, project_id: int, points: int) -> None:
+        if project_id in self._store:
+            self._store[project_id].completed_story_points = points
+
+
+# ── InMemoryMilestoneRepository ───────────────────────────────────────────────
+
+
+class InMemoryMilestoneRepository(IMilestoneRepository):
+
+    def __init__(self) -> None:
+        self._store: dict[int, Milestone] = {}
+        self._next_id = 1
+
+    async def find_by_id(self, milestone_id: int) -> Milestone | None:
+        return self._store.get(milestone_id)
+
+    async def find_by_project(self, project_id: int) -> list[Milestone]:
+        return [m for m in self._store.values() if m.project_id == project_id]
+
+    async def save(self, milestone: Milestone) -> Milestone:
+        if milestone.id is None:
+            milestone.id = self._next_id
+            self._next_id += 1
+        else:
+            self._next_id = max(self._next_id, milestone.id + 1)
+        self._store[milestone.id] = milestone
+        return milestone
+
+    async def update_status(self, milestone_id: int, status: MilestoneStatus) -> None:
+        if milestone_id in self._store:
+            self._store[milestone_id].status = status
+
+    async def sum_done_story_points(self, project_id: int) -> int:
+        return sum(
+            m.story_points
+            for m in self._store.values()
+            if m.project_id == project_id and m.status == MilestoneStatus.DONE
+        )
+
+
+# ── Factory helpers ───────────────────────────────────────────────────────────
+
+
+def make_project(
+    project_id: int = 1,
+    name: str = "Alpha Project",
+    manager_user_id: int = 2,
+    status: ProjectStatus = ProjectStatus.PLANNED,
+    total_story_points: int = 100,
+    completed_story_points: int = 0,
+) -> Project:
+    now = datetime.now(timezone.utc)
+    return Project(
+        id=project_id,
+        name=name,
+        description=None,
+        manager_user_id=manager_user_id,
+        status=status,
+        total_story_points=total_story_points,
+        completed_story_points=completed_story_points,
+        start_date=None,
+        end_date=None,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+def make_milestone(
+    milestone_id: int = 1,
+    project_id: int = 1,
+    title: str = "M1",
+    status: MilestoneStatus = MilestoneStatus.PENDING,
+    story_points: int = 10,
+) -> Milestone:
+    now = datetime.now(timezone.utc)
+    return Milestone(
+        id=milestone_id,
+        project_id=project_id,
+        title=title,
+        description=None,
+        due_date=None,
+        status=status,
+        story_points=story_points,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+@pytest.fixture
+def fake_project_repo() -> InMemoryProjectRepository:
+    return InMemoryProjectRepository()
+
+
+@pytest.fixture
+def fake_milestone_repo() -> InMemoryMilestoneRepository:
+    return InMemoryMilestoneRepository()
 
 
 @pytest_asyncio.fixture
