@@ -2,6 +2,9 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from src.domain.exceptions import (
+    AllocationAlreadyEndedError,
+    AllocationNotFoundError,
+    AllocationOverlapError,
     AuthorizationError,
     CannotDeactivateSelfError,
     DomainException,
@@ -12,10 +15,12 @@ from src.domain.exceptions import (
     EmployeeAlreadyExistsError,
     EmployeeNotFoundError,
     InactiveUserError,
+    InvalidAllocationDateError,
     InvalidCredentialsError,
     InvalidManagerError,
     InvalidProjectManagerError,
     MilestoneNotFoundError,
+    ProjectNotActiveError,
     ProjectNotFoundError,
     SkillNotFoundError,
     UserNotFoundError,
@@ -226,6 +231,66 @@ def register_exception_handlers(app: FastAPI) -> None:
             content={
                 "success": False,
                 "error": {"code": "INVALID_PROJECT_MANAGER", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(AllocationNotFoundError)
+    async def handle_allocation_not_found(
+        request: Request, exc: AllocationNotFoundError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=404,
+            content={
+                "success": False,
+                "error": {"code": "ALLOCATION_NOT_FOUND", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(AllocationOverlapError)
+    async def handle_allocation_overlap(
+        request: Request, exc: AllocationOverlapError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "success": False,
+                "error": {"code": "ALLOCATION_OVERLAP", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(AllocationAlreadyEndedError)
+    async def handle_allocation_already_ended(
+        request: Request, exc: AllocationAlreadyEndedError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "success": False,
+                "error": {"code": "ALLOCATION_ALREADY_ENDED", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(InvalidAllocationDateError)
+    async def handle_invalid_allocation_date(
+        request: Request, exc: InvalidAllocationDateError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "error": {"code": "INVALID_ALLOCATION_DATE", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(ProjectNotActiveError)
+    async def handle_project_not_active(
+        request: Request, exc: ProjectNotActiveError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "error": {"code": "PROJECT_NOT_ACTIVE", "message": str(exc)},
             },
         )
 

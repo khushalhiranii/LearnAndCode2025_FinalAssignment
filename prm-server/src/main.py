@@ -10,6 +10,7 @@ from src.api.routers.health_router import router as health_router
 from src.api.routers.user_router import router as user_router
 from src.api.routers.employee_router import router as employee_router
 from src.api.routers.project_router import router as project_router
+from src.api.routers.allocation_router import router as allocation_router
 from src.config import settings
 from src.infrastructure.database.engine import engine
 
@@ -39,3 +40,4 @@ app.include_router(health_router)
 app.include_router(user_router)
 app.include_router(employee_router)
 app.include_router(project_router)
+app.include_router(allocation_router)
