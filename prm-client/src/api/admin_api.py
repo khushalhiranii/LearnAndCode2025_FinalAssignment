@@ -183,3 +183,86 @@ def remove_employee_skill(employee_id: int, skill_id: int) -> None:
             headers={"Authorization": f"Bearer {session.access_token}"},
         )
     resp.raise_for_status()
+
+
+# ── Project & Milestone API calls ─────────────────────────────────────────────
+
+
+def list_projects(status: str | None = None, manager_user_id: int | None = None) -> dict:
+    params: dict = {}
+    if status:
+        params["status"] = status
+    if manager_user_id:
+        params["manager_user_id"] = manager_user_id
+    with get_client() as client:
+        resp = client.get(
+            "/admin/projects",
+            params=params,
+            headers={"Authorization": f"Bearer {session.access_token}"},
+        )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def create_project(payload: dict) -> dict:
+    with get_client() as client:
+        resp = client.post(
+            "/admin/projects",
+            json=payload,
+            headers={"Authorization": f"Bearer {session.access_token}"},
+        )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_project(project_id: int) -> dict:
+    with get_client() as client:
+        resp = client.get(
+            f"/admin/projects/{project_id}",
+            headers={"Authorization": f"Bearer {session.access_token}"},
+        )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def update_project(project_id: int, payload: dict) -> dict:
+    with get_client() as client:
+        resp = client.patch(
+            f"/admin/projects/{project_id}",
+            json=payload,
+            headers={"Authorization": f"Bearer {session.access_token}"},
+        )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def list_milestones(project_id: int) -> list:
+    with get_client() as client:
+        resp = client.get(
+            f"/admin/projects/{project_id}/milestones",
+            headers={"Authorization": f"Bearer {session.access_token}"},
+        )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def add_milestone(project_id: int, payload: dict) -> dict:
+    with get_client() as client:
+        resp = client.post(
+            f"/admin/projects/{project_id}/milestones",
+            json=payload,
+            headers={"Authorization": f"Bearer {session.access_token}"},
+        )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def update_milestone_status(project_id: int, milestone_id: int, status: str) -> dict:
+    with get_client() as client:
+        resp = client.patch(
+            f"/admin/projects/{project_id}/milestones/{milestone_id}/status",
+            json={"status": status},
+            headers={"Authorization": f"Bearer {session.access_token}"},
+        )
+    resp.raise_for_status()
+    return resp.json()

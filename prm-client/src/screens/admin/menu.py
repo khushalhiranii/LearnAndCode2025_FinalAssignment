@@ -7,6 +7,7 @@ from rich.panel import Panel
 
 from src.screens.admin.users_screen import users_screen
 from src.screens.admin.employees_screen import employees_screen
+from src.screens.admin.projects_screen import projects_screen
 
 console = Console()
 
@@ -17,6 +18,7 @@ def admin_menu() -> None:
         console.print(Panel("[bold cyan]Admin Menu[/bold cyan]"))
         console.print("  [1] Manage Users")
         console.print("  [2] Manage Employees & Skills")
+        console.print("  [3] Manage Projects")
         console.print("  [0] Logout")
 
         choice = console.input("\n[bold]Choice:[/bold] ").strip()
@@ -25,6 +27,8 @@ def admin_menu() -> None:
             users_screen()
         elif choice == "2":
             employees_screen()
+        elif choice == "3":
+            projects_screen()
         elif choice == "0":
             console.print("[yellow]Logged out.[/yellow]")
             break
