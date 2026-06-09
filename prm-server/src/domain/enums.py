@@ -7,7 +7,17 @@ class Role(str, Enum):
     EMPLOYEE = "EMPLOYEE"
 
 
+class EmployeeStatus(str, Enum):
+    ACTIVE = "ACTIVE"       # allocated or bench — actively employed
+    INACTIVE = "INACTIVE"   # deactivated by admin
+
+
+class ProficiencyLevel(str, Enum):
+    BEGINNER = "BEGINNER"
+    INTERMEDIATE = "INTERMEDIATE"
+    EXPERT = "EXPERT"
+
+
 # Additional enums added in future sprints:
-# EmployeeStatus, ProjectStatus, MilestoneStatus,
-# ProficiencyLevel, SkillCategory, TimesheetStatus,
+# ProjectStatus, MilestoneStatus, SkillCategory, TimesheetStatus,
 # ProjectHealthStatus, AIRequestType

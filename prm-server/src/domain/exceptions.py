@@ -28,3 +28,37 @@ class UserNotFoundError(DomainException):
 
 class AuthorizationError(DomainException):
     """Caller does not have permission for the requested operation."""
+
+
+# --- Sprint 2 additions ---
+
+class EmployeeNotFoundError(DomainException):
+    """No employee record found for the given identifier."""
+
+
+class EmployeeAlreadyExistsError(DomainException):
+    """An employee profile already exists for this user."""
+
+
+class SkillNotFoundError(DomainException):
+    """No skill found for the given identifier."""
+
+
+class DuplicateSkillError(DomainException):
+    """Employee already has this skill assigned."""
+
+
+class InvalidManagerError(DomainException):
+    """The proposed manager is invalid (wrong role, inactive, or is the same user)."""
+
+
+class CannotDeactivateSelfError(DomainException):
+    """Admin cannot deactivate their own account."""
+
+
+class DuplicateUsernameError(DomainException):
+    """A user with this username already exists."""
+
+
+class DuplicateEmailError(DomainException):
+    """A user with this email already exists."""
