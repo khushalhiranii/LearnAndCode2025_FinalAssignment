@@ -11,7 +11,7 @@ from src.api import admin_api
 console = Console()
 
 _PROJECT_STATUSES = ["PLANNED", "ACTIVE", "ON_HOLD", "COMPLETED", "CANCELLED"]
-_MILESTONE_STATUSES = ["PENDING", "IN_PROGRESS", "DONE", "CANCELLED"]
+_MILESTONE_STATUSES = ["NOT_STARTED", "IN_PROGRESS", "DONE", "CANCELLED"]
 
 
 # ─── helpers ──────────────────────────────────────────────────────────────────

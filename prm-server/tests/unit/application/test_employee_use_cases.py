@@ -17,7 +17,7 @@ from src.application.dtos.employee_dtos import (
 )
 from src.domain.entities.employee import Employee
 from src.domain.entities.user import User
-from src.domain.enums import ProficiencyLevel, Role
+from src.domain.enums import AllocationStatus, ProficiencyLevel, Role
 from src.domain.exceptions import (
     CannotDeactivateSelfError,
     DuplicateSkillError,
@@ -26,10 +26,12 @@ from src.domain.exceptions import (
     SkillNotFoundError,
 )
 from tests.conftest import (
+    InMemoryAllocationRepository,
     InMemoryEmployeeRepository,
     InMemorySkillRepository,
     InMemoryUserRepository,
     make_admin_user,
+    make_allocation,
     make_skill,
 )
 
@@ -115,6 +117,7 @@ async def test_update_employee_raises_for_unknown():
 async def test_deactivate_employee_sets_inactive():
     emp_repo = InMemoryEmployeeRepository()
     user_repo = InMemoryUserRepository()
+    alloc_repo = InMemoryAllocationRepository()
 
     admin = make_admin_user()
     await user_repo.save(admin)
@@ -123,7 +126,7 @@ async def test_deactivate_employee_sets_inactive():
     target_user = _make_user(2)
     await user_repo.save(target_user)
 
-    use_case = DeactivateEmployeeUseCase(user_repo, emp_repo)
+    use_case = DeactivateEmployeeUseCase(user_repo, emp_repo, alloc_repo)
     result = await use_case.execute(employee.id, acting_admin_id=admin.id)
 
     assert result.is_active is False
@@ -135,14 +138,42 @@ async def test_deactivate_employee_sets_inactive():
 async def test_deactivate_employee_self_raises():
     emp_repo = InMemoryEmployeeRepository()
     user_repo = InMemoryUserRepository()
+    alloc_repo = InMemoryAllocationRepository()
 
     employee = _make_employee(user_id=1)
     await emp_repo.save(employee)
 
-    use_case = DeactivateEmployeeUseCase(user_repo, emp_repo)
+    use_case = DeactivateEmployeeUseCase(user_repo, emp_repo, alloc_repo)
 
     with pytest.raises(CannotDeactivateSelfError):
         await use_case.execute(employee.id, acting_admin_id=1)
+
+
+@pytest.mark.asyncio
+async def test_deactivate_employee_ends_active_allocations():
+    emp_repo = InMemoryEmployeeRepository()
+    user_repo = InMemoryUserRepository()
+    alloc_repo = InMemoryAllocationRepository()
+
+    admin = make_admin_user()
+    await user_repo.save(admin)
+    employee = _make_employee(user_id=2)
+    await emp_repo.save(employee)
+    target_user = _make_user(2)
+    await user_repo.save(target_user)
+
+    alloc1 = make_allocation(allocation_id=1, employee_id=employee.id, project_id=1)
+    alloc2 = make_allocation(allocation_id=2, employee_id=employee.id, project_id=2)
+    await alloc_repo.save(alloc1)
+    await alloc_repo.save(alloc2)
+
+    use_case = DeactivateEmployeeUseCase(user_repo, emp_repo, alloc_repo)
+    await use_case.execute(employee.id, acting_admin_id=admin.id)
+
+    ended1 = await alloc_repo.find_by_id(alloc1.id)
+    ended2 = await alloc_repo.find_by_id(alloc2.id)
+    assert ended1.status == AllocationStatus.ENDED
+    assert ended2.status == AllocationStatus.ENDED
 
 
 # ── AssignManagerUseCase ─────────────────────────────────────────────────────
@@ -264,7 +295,7 @@ async def test_add_duplicate_skill_raises():
     with pytest.raises(DuplicateSkillError):
         await use_case.add_skill_to_employee(
             employee.id,
-            AddSkillRequest(skill_id=skill.id, proficiency=ProficiencyLevel.EXPERT),
+            AddSkillRequest(skill_id=skill.id, proficiency=ProficiencyLevel.ADVANCED),
         )
 
 
@@ -284,10 +315,10 @@ async def test_update_skill_proficiency():
     )
 
     result = await use_case.update_employee_skill(
-        employee.id, skill.id, UpdateSkillRequest(proficiency=ProficiencyLevel.EXPERT)
+        employee.id, skill.id, UpdateSkillRequest(proficiency=ProficiencyLevel.ADVANCED)
     )
 
-    assert result.proficiency == ProficiencyLevel.EXPERT
+    assert result.proficiency == ProficiencyLevel.ADVANCED
 
 
 @pytest.mark.asyncio

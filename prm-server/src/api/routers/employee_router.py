@@ -55,7 +55,7 @@ async def deactivate_employee(
     current_user: User = Depends(require_admin),
     uow: UnitOfWork = Depends(get_unit_of_work),
 ) -> dict:
-    use_case = DeactivateEmployeeUseCase(uow.users, uow.employees)
+    use_case = DeactivateEmployeeUseCase(uow.users, uow.employees, uow.allocations)
     result = await use_case.execute(employee_id, acting_admin_id=current_user.id)  # type: ignore[arg-type]
     return {"success": True, "data": result.model_dump()}
 

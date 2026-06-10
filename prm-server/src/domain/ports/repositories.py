@@ -161,6 +161,11 @@ class IAllocationRepository(ABC):
         """Set status=ENDED and to_date=ended_at."""
         ...
 
+    @abstractmethod
+    async def find_all(self) -> list[Allocation]:
+        """Return every allocation row (admin use only)."""
+        ...
+
 
 class IProjectRepository(ABC):
 

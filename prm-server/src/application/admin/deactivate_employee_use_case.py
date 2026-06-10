@@ -1,7 +1,13 @@
+from datetime import date
+
 from src.application.dtos.employee_dtos import EmployeeResponse
 from src.domain.entities.employee import Employee
 from src.domain.exceptions import CannotDeactivateSelfError, EmployeeNotFoundError
-from src.domain.ports.repositories import IEmployeeRepository, IUserRepository
+from src.domain.ports.repositories import (
+    IAllocationRepository,
+    IEmployeeRepository,
+    IUserRepository,
+)
 
 
 class DeactivateEmployeeUseCase:
@@ -10,9 +16,11 @@ class DeactivateEmployeeUseCase:
         self,
         user_repo: IUserRepository,
         employee_repo: IEmployeeRepository,
+        allocation_repo: IAllocationRepository,
     ) -> None:
         self._users = user_repo
         self._employees = employee_repo
+        self._allocations = allocation_repo
 
     async def execute(self, employee_id: int, acting_admin_id: int) -> EmployeeResponse:
         employee = await self._employees.find_by_id(employee_id)
@@ -21,6 +29,12 @@ class DeactivateEmployeeUseCase:
 
         if employee.user_id == acting_admin_id:
             raise CannotDeactivateSelfError("Cannot deactivate yourself.")
+
+        # End all active allocations immediately (BRD Screen 3.1.2 + Sequence Diagram 6.4)
+        active_allocations = await self._allocations.find_active_by_employee(employee_id)
+        today = date.today()
+        for allocation in active_allocations:
+            await self._allocations.end_allocation(allocation.id, today)
 
         await self._employees.update_active(employee_id, is_active=False)
         await self._users.update_active(employee.user_id, is_active=False)

@@ -15,7 +15,7 @@ class EmployeeStatus(str, Enum):
 class ProficiencyLevel(str, Enum):
     BEGINNER = "BEGINNER"
     INTERMEDIATE = "INTERMEDIATE"
-    EXPERT = "EXPERT"
+    ADVANCED = "ADVANCED"
 
 
 class ProjectStatus(str, Enum):
@@ -27,7 +27,7 @@ class ProjectStatus(str, Enum):
 
 
 class MilestoneStatus(str, Enum):
-    PENDING = "PENDING"
+    NOT_STARTED = "NOT_STARTED"
     IN_PROGRESS = "IN_PROGRESS"
     DONE = "DONE"
     CANCELLED = "CANCELLED"

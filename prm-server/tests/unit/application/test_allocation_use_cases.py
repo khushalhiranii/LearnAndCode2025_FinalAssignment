@@ -134,7 +134,22 @@ async def test_allocate_rejects_project_from_other_manager():
         await use_case.allocate(MANAGER_USER_ID, _make_request())
 
 
-async def test_allocate_rejects_non_active_project():
+async def test_allocate_rejects_non_active_or_planned_project():
+    alloc_repo = InMemoryAllocationRepository()
+    emp_repo = InMemoryEmployeeRepository()
+    proj_repo = InMemoryProjectRepository()
+
+    emp = _make_active_employee()
+    await emp_repo.save(emp)
+    proj = make_project(project_id=1, manager_user_id=MANAGER_USER_ID, status=ProjectStatus.ON_HOLD)
+    await proj_repo.save(proj)
+
+    use_case = AllocationUseCase(alloc_repo, emp_repo, proj_repo)
+    with pytest.raises(ProjectNotActiveError):
+        await use_case.allocate(MANAGER_USER_ID, _make_request())
+
+
+async def test_allocate_allows_planned_project():
     alloc_repo = InMemoryAllocationRepository()
     emp_repo = InMemoryEmployeeRepository()
     proj_repo = InMemoryProjectRepository()
@@ -145,8 +160,8 @@ async def test_allocate_rejects_non_active_project():
     await proj_repo.save(proj)
 
     use_case = AllocationUseCase(alloc_repo, emp_repo, proj_repo)
-    with pytest.raises(ProjectNotActiveError):
-        await use_case.allocate(MANAGER_USER_ID, _make_request())
+    result = await use_case.allocate(MANAGER_USER_ID, _make_request())
+    assert result.status == AllocationStatus.ACTIVE
 
 
 async def test_allocate_rejects_when_utilization_would_exceed_100():

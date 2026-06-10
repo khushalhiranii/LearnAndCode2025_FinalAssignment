@@ -125,7 +125,7 @@ def _manage_skills() -> None:
         action = console.input("Action: ").strip().lower()
         if action == "a":
             sid = console.input("Skill ID: ").strip()
-            prof = console.input("Proficiency (BEGINNER/INTERMEDIATE/EXPERT): ").strip().upper()
+            prof = console.input("Proficiency (BEGINNER/INTERMEDIATE/ADVANCED): ").strip().upper()
             admin_api.add_employee_skill(int(eid), int(sid), prof)
             console.print("[green]Skill added.[/green]")
         elif action == "r":

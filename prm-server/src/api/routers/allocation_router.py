@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, status
 
-from src.api.dependencies import require_manager
+from src.api.dependencies import require_admin, require_manager
 from src.application.dtos.allocation_dtos import (
     AllocateEmployeeRequest,
     AllocationResponse,
@@ -84,3 +84,20 @@ async def list_my_projects(
         }
         for p in projects_result
     ]
+
+
+@router.get("/admin/allocations", response_model=list[AllocationResponse], tags=["admin-allocations"])
+async def list_all_allocations(
+    employee_id: int | None = None,
+    project_id: int | None = None,
+    current_user: User = Depends(require_admin),
+    uow: UnitOfWork = Depends(get_unit_of_work),
+) -> list[AllocationResponse]:
+    """Admin: view all allocations company-wide with optional filters (BRD Screen 3.3)."""
+    if employee_id is not None:
+        allocations = await uow.allocations.find_by_employee(employee_id)
+    elif project_id is not None:
+        allocations = await uow.allocations.find_by_project(project_id)
+    else:
+        allocations = await uow.allocations.find_all()
+    return [_to_allocation_response(a) for a in allocations]

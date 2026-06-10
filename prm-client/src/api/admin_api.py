@@ -266,3 +266,26 @@ def update_milestone_status(project_id: int, milestone_id: int, status: str) -> 
         )
     resp.raise_for_status()
     return resp.json()
+
+
+# ── Allocation API calls (admin) ───────────────────────────────────────────────
+
+
+def list_all_allocations(
+    employee_id: int | None = None,
+    project_id: int | None = None,
+) -> list:
+    """GET /admin/allocations — returns all allocations, optionally filtered."""
+    params: dict = {}
+    if employee_id is not None:
+        params["employee_id"] = employee_id
+    if project_id is not None:
+        params["project_id"] = project_id
+    with get_client() as client:
+        resp = client.get(
+            "/admin/allocations",
+            params=params,
+            headers={"Authorization": f"Bearer {session.access_token}"},
+        )
+    resp.raise_for_status()
+    return resp.json()

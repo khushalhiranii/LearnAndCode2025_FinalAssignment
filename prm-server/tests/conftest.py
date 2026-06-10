@@ -387,7 +387,7 @@ def make_milestone(
     milestone_id: int = 1,
     project_id: int = 1,
     title: str = "M1",
-    status: MilestoneStatus = MilestoneStatus.PENDING,
+    status: MilestoneStatus = MilestoneStatus.NOT_STARTED,
     story_points: int = 10,
 ) -> Milestone:
     now = datetime.now(timezone.utc)
@@ -467,6 +467,9 @@ class InMemoryAllocationRepository(IAllocationRepository):
             a.status = AllocationStatus.ENDED
             a.to_date = ended_at
             a.updated_at = datetime.now(timezone.utc)
+
+    async def find_all(self) -> list[Allocation]:
+        return list(self._store.values())
 
 
 # ── Factory helpers ───────────────────────────────────────────────────────────

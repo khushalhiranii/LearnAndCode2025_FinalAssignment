@@ -68,9 +68,9 @@ class AllocationUseCase:
         project = await self._projects.find_by_id(request.project_id)
         if project is None:
             raise ProjectNotFoundError(f"Project {request.project_id} not found.")
-        if project.status != ProjectStatus.ACTIVE:
+        if project.status not in (ProjectStatus.ACTIVE, ProjectStatus.PLANNED):
             raise ProjectNotActiveError(
-                f"Project '{project.name}' is not ACTIVE "
+                f"Project '{project.name}' must be ACTIVE or PLANNED for allocation "
                 f"(current status: {project.status.value})."
             )
         if project.manager_user_id != manager_user_id:

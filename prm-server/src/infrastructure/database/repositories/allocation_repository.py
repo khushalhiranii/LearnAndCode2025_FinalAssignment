@@ -91,3 +91,9 @@ class SQLAlchemyAllocationRepository(IAllocationRepository):
                 updated_at=datetime.now(timezone.utc),
             )
         )
+
+    async def find_all(self) -> list[Allocation]:
+        result = await self._session.execute(
+            select(AllocationModel).order_by(AllocationModel.employee_id)
+        )
+        return [self._to_entity(m) for m in result.scalars().all()]

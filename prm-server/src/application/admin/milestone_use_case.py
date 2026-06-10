@@ -35,7 +35,7 @@ class MilestoneUseCase:
             title=request.title,
             description=request.description,
             due_date=request.due_date,
-            status=MilestoneStatus.PENDING,
+            status=MilestoneStatus.NOT_STARTED,
             story_points=request.story_points,
             created_at=now,
             updated_at=now,

@@ -195,7 +195,7 @@ async def test_list_projects_filters_by_manager():
 # ── Milestone tests ───────────────────────────────────────────────────────────
 
 
-async def test_add_milestone_adds_with_pending_status():
+async def test_add_milestone_adds_with_not_started_status():
     project_repo = InMemoryProjectRepository()
     milestone_repo = InMemoryMilestoneRepository()
     project = make_project()
@@ -206,7 +206,7 @@ async def test_add_milestone_adds_with_pending_status():
         project.id, AddMilestoneRequest(title="M1", story_points=20)
     )
 
-    assert result.status == MilestoneStatus.PENDING
+    assert result.status == MilestoneStatus.NOT_STARTED
     assert result.story_points == 20
     assert result.project_id == project.id
 
