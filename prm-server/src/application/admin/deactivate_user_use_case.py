@@ -27,7 +27,7 @@ class DeactivateUserUseCase:
         if user is None:
             raise UserNotFoundError(f"User {target_user_id} not found.")
 
-        await self._users.update_active(target_user_id, is_active=False)
+        await self._users.update_active(target_user_id, is_account_enabled=False)
 
         # Cascade to employee profile if it exists
         employee = await self._employees.find_by_user_id(target_user_id)
@@ -39,8 +39,8 @@ class DeactivateUserUseCase:
             username=user.username,
             email=user.email,
             full_name=user.full_name,
-            role=user.role,
-            is_active=False,
+            role=None,
+            is_account_enabled=False,
             force_password_change=user.force_password_change,
             created_at=user.created_at,
             updated_at=user.updated_at,

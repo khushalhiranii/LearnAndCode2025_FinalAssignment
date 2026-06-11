@@ -1,5 +1,5 @@
 from src.application.dtos.employee_dtos import EmployeeListResponse, EmployeeResponse
-from src.domain.entities.employee import Employee
+from src.domain.entities.resource_profile import ResourceProfile
 from src.domain.ports.repositories import IEmployeeRepository, IUserRepository
 
 
@@ -40,7 +40,7 @@ class ListEmployeesUseCase:
                     designation=emp.designation,
                     date_of_joining=emp.date_of_joining,
                     manager_user_id=emp.manager_user_id,
-                    is_active=emp.is_active,
+                    is_available=emp.is_available,
                     created_at=emp.created_at,
                     updated_at=emp.updated_at,
                 )

@@ -7,7 +7,7 @@ from src.domain.enums import AllocationStatus
 @dataclass
 class Allocation:
     id: int | None
-    employee_id: int           # FK → employees.id
+    resource_profile_id: int   # FK → resource_profiles.id
     project_id: int            # FK → projects.id
     utilization_percent: int   # 1–100; sum across active allocations must not exceed 100
     from_date: date

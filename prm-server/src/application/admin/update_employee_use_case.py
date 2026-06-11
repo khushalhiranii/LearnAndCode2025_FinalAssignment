@@ -1,7 +1,7 @@
 from datetime import date
 
 from src.application.dtos.employee_dtos import EmployeeResponse, UpdateEmployeeRequest
-from src.domain.entities.employee import Employee
+from src.domain.entities.resource_profile import ResourceProfile
 from src.domain.exceptions import EmployeeNotFoundError
 from src.domain.ports.repositories import IEmployeeRepository, IUserRepository
 
@@ -39,7 +39,7 @@ class UpdateEmployeeUseCase:
         return _to_response(updated, user.full_name if user else "", user.email if user else "")
 
 
-def _to_response(employee: Employee, full_name: str, email: str) -> EmployeeResponse:
+def _to_response(employee: ResourceProfile, full_name: str, email: str) -> EmployeeResponse:
     return EmployeeResponse(
         id=employee.id,  # type: ignore[arg-type]
         user_id=employee.user_id,
@@ -49,7 +49,7 @@ def _to_response(employee: Employee, full_name: str, email: str) -> EmployeeResp
         designation=employee.designation,
         date_of_joining=employee.date_of_joining,
         manager_user_id=employee.manager_user_id,
-        is_active=employee.is_active,
+        is_available=employee.is_available,
         created_at=employee.created_at,
         updated_at=employee.updated_at,
     )

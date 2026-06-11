@@ -1,9 +1,9 @@
 import secrets
 import string
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from src.application.dtos.user_dtos import CreateUserRequest, UserResponse
-from src.domain.entities.employee import Employee
+from src.domain.entities.resource_profile import ResourceProfile
 from src.domain.entities.user import User
 from src.domain.enums import Role
 from src.domain.exceptions import DuplicateEmailError, DuplicateUsernameError
@@ -44,17 +44,25 @@ class CreateUserUseCase:
             email=request.email,
             username=request.username,
             password_hash=hash_password(temp_password),
-            role=request.role,
-            is_active=True,
+            is_account_enabled=True,
             force_password_change=True,
             created_at=now,
             updated_at=now,
         )
         saved_user = await self._users.save(user)
 
-        # Auto-create employee profile for MANAGER and EMPLOYEE roles
+        # Assign role via user_roles table
+        await self._users.assign_role(
+            user_id=saved_user.id,  # type: ignore[arg-type]
+            role=request.role,
+            from_date=date.today(),
+            granted_by_user_id=None,
+            reason="User created by admin",
+        )
+
+        # Auto-create resource profile for MANAGER and EMPLOYEE roles
         if request.role in (Role.MANAGER, Role.EMPLOYEE):
-            employee = Employee(
+            profile = ResourceProfile(
                 id=None,
                 user_id=saved_user.id,  # type: ignore[arg-type]
                 full_name=saved_user.full_name,
@@ -63,23 +71,23 @@ class CreateUserUseCase:
                 designation=None,
                 date_of_joining=None,
                 manager_user_id=None,
-                is_active=True,
+                is_available=True,
                 created_at=now,
                 updated_at=now,
             )
-            await self._employees.save(employee)
+            await self._employees.save(profile)
 
-        return _user_to_response(saved_user), temp_password
+        return _user_to_response(saved_user, request.role), temp_password
 
 
-def _user_to_response(user: User) -> UserResponse:
+def _user_to_response(user: User, role: Role | None) -> UserResponse:
     return UserResponse(
         id=user.id,  # type: ignore[arg-type]
         username=user.username,
         email=user.email,
         full_name=user.full_name,
-        role=user.role,
-        is_active=user.is_active,
+        role=role,
+        is_account_enabled=user.is_account_enabled,
         force_password_change=user.force_password_change,
         created_at=user.created_at,
         updated_at=user.updated_at,

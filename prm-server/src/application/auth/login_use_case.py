@@ -24,16 +24,20 @@ class LoginUseCase:
         if not verify_password(request.password, user.password_hash):
             raise InvalidCredentialsError("Invalid username or password.")
 
-        if not user.is_active:
+        if not user.is_account_enabled:
             raise InactiveUserError("This account has been deactivated.")
 
         if user.force_password_change:
             temp_token = create_temp_token(user.id)  # type: ignore[arg-type]
             return PasswordChangeRequiredResponse(temp_token=temp_token)
 
-        access_token = create_access_token(user.id, user.role)  # type: ignore[arg-type]
+        role = await self._user_repo.find_active_role(user.id)  # type: ignore[arg-type]
+        if role is None:
+            raise InactiveUserError("No active role assigned to this account.")
+
+        access_token = create_access_token(user.id, role.value)  # type: ignore[arg-type]
         return LoginResponse(
             access_token=access_token,
-            role=user.role.value,
+            role=role.value,
             full_name=user.full_name,
         )

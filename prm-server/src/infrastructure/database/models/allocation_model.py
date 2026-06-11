@@ -10,8 +10,8 @@ class AllocationModel(Base):
     __tablename__ = "allocations"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    employee_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("employees.id", ondelete="RESTRICT"), nullable=False
+    resource_profile_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("resource_profiles.id", ondelete="RESTRICT"), nullable=False
     )
     project_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("projects.id", ondelete="RESTRICT"), nullable=False

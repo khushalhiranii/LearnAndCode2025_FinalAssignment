@@ -1,8 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from src.domain.enums import Role
-
 
 @dataclass
 class User:
@@ -11,8 +9,7 @@ class User:
     email: str
     username: str
     password_hash: str
-    role: Role
-    is_active: bool
+    is_account_enabled: bool
     force_password_change: bool
     created_at: datetime = field(default_factory=datetime.utcnow)
     updated_at: datetime = field(default_factory=datetime.utcnow)

@@ -39,12 +39,17 @@ class SkillResponse(BaseModel):
 
 class EmployeeSkillResponse(BaseModel):
     id: int
-    employee_id: int
+    resource_profile_id: int
     skill_id: int
     skill_name: str
     proficiency: ProficiencyLevel
     created_at: datetime
     updated_at: datetime
+
+    # Backward-compat alias consumed by serializer only — callers should use resource_profile_id
+    @property
+    def employee_id(self) -> int:
+        return self.resource_profile_id
 
 
 class EmployeeResponse(BaseModel):
@@ -56,7 +61,7 @@ class EmployeeResponse(BaseModel):
     designation: str | None
     date_of_joining: date | None
     manager_user_id: int | None
-    is_active: bool
+    is_available: bool
     created_at: datetime
     updated_at: datetime
 

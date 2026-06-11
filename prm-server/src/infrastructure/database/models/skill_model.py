@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, String, TIMESTAMP, UniqueConstraint, text
+from sqlalchemy import BigInteger, Boolean, String, TIMESTAMP, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.infrastructure.database.engine import Base
@@ -13,6 +13,7 @@ class SkillModel(Base):
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     category: Mapped[str] = mapped_column(String(50), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=text("NOW()")
     )

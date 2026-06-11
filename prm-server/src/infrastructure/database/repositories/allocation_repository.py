@@ -18,7 +18,7 @@ class SQLAlchemyAllocationRepository(IAllocationRepository):
     def _to_entity(model: AllocationModel) -> Allocation:
         return Allocation(
             id=model.id,
-            employee_id=model.employee_id,
+            resource_profile_id=model.resource_profile_id,
             project_id=model.project_id,
             utilization_percent=model.utilization_percent,
             from_date=model.from_date,
@@ -38,7 +38,7 @@ class SQLAlchemyAllocationRepository(IAllocationRepository):
     async def find_active_by_employee(self, employee_id: int) -> list[Allocation]:
         result = await self._session.execute(
             select(AllocationModel).where(
-                AllocationModel.employee_id == employee_id,
+                AllocationModel.resource_profile_id == employee_id,
                 AllocationModel.status == AllocationStatus.ACTIVE.value,
             )
         )
@@ -60,7 +60,7 @@ class SQLAlchemyAllocationRepository(IAllocationRepository):
         employee_id: int,
         active_only: bool = False,
     ) -> list[Allocation]:
-        q = select(AllocationModel).where(AllocationModel.employee_id == employee_id)
+        q = select(AllocationModel).where(AllocationModel.resource_profile_id == employee_id)
         if active_only:
             q = q.where(AllocationModel.status == AllocationStatus.ACTIVE.value)
         result = await self._session.execute(q)
@@ -70,7 +70,7 @@ class SQLAlchemyAllocationRepository(IAllocationRepository):
         model = AllocationModel()
         if allocation.id is not None:
             model.id = allocation.id
-        model.employee_id = allocation.employee_id
+        model.resource_profile_id = allocation.resource_profile_id
         model.project_id = allocation.project_id
         model.utilization_percent = allocation.utilization_percent
         model.from_date = allocation.from_date
@@ -94,6 +94,6 @@ class SQLAlchemyAllocationRepository(IAllocationRepository):
 
     async def find_all(self) -> list[Allocation]:
         result = await self._session.execute(
-            select(AllocationModel).order_by(AllocationModel.employee_id)
+            select(AllocationModel).order_by(AllocationModel.resource_profile_id)
         )
         return [self._to_entity(m) for m in result.scalars().all()]

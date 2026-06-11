@@ -12,29 +12,34 @@ class ListUsersUseCase:
     async def execute(
         self,
         role: Role | None = None,
-        is_active: bool | None = None,
+        is_account_enabled: bool | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> UserListResponse:
         users, total = await self._users.find_all(
-            role=role, is_active=is_active, page=page, page_size=page_size
+            role=role, is_account_enabled=is_account_enabled, page=page, page_size=page_size
         )
+        # Load active role for each user (acceptable for list sizes typical in admin UIs)
+        items = []
+        for u in users:
+            active_role = await self._users.find_active_role(u.id)  # type: ignore[arg-type]
+            items.append(_to_response(u, active_role))
         return UserListResponse(
-            items=[_to_response(u) for u in users],
+            items=items,
             total=total,
             page=page,
             page_size=page_size,
         )
 
 
-def _to_response(user: User) -> UserResponse:
+def _to_response(user: User, role: Role | None) -> UserResponse:
     return UserResponse(
         id=user.id,  # type: ignore[arg-type]
         username=user.username,
         email=user.email,
         full_name=user.full_name,
-        role=user.role,
-        is_active=user.is_active,
+        role=role,
+        is_account_enabled=user.is_account_enabled,
         force_password_change=user.force_password_change,
         created_at=user.created_at,
         updated_at=user.updated_at,

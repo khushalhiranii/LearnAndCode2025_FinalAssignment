@@ -7,9 +7,12 @@ class Role(str, Enum):
     EMPLOYEE = "EMPLOYEE"
 
 
-class EmployeeStatus(str, Enum):
-    ACTIVE = "ACTIVE"       # allocated or bench — actively employed
-    INACTIVE = "INACTIVE"   # deactivated by admin
+class SkillCategory(str, Enum):
+    BACKEND = "BACKEND"
+    FRONTEND = "FRONTEND"
+    DEVOPS = "DEVOPS"
+    QA = "QA"
+    OTHER = "OTHER"
 
 
 class ProficiencyLevel(str, Enum):
@@ -38,5 +41,23 @@ class AllocationStatus(str, Enum):
     ENDED = "ENDED"
 
 
-# Additional enums added in future sprints:
-# SkillCategory, TimesheetStatus, ProjectHealthStatus, AIRequestType
+class WorkStatus(str, Enum):
+    """Computed at query time from active allocations. Never stored in DB."""
+    BENCH = "BENCH"
+    ALLOCATED = "ALLOCATED"
+
+
+class TimesheetStatus(str, Enum):
+    SUBMITTED = "SUBMITTED"
+    MISSED = "MISSED"
+
+
+class ProjectHealthStatus(str, Enum):
+    ON_TRACK = "ON_TRACK"
+    ATTENTION = "ATTENTION"
+    AT_RISK = "AT_RISK"
+
+
+class AIRequestType(str, Enum):
+    SKILL_MATCH = "SKILL_MATCH"
+    RISK_SUMMARY = "RISK_SUMMARY"

@@ -14,8 +14,7 @@ class UserModel(Base):
     email: Mapped[str] = mapped_column(String(320), nullable=False, unique=True)
     username: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[str] = mapped_column(String(20), nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    is_account_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     force_password_change: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True
     )

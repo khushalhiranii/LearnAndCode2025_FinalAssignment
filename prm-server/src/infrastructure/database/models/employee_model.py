@@ -6,8 +6,8 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.infrastructure.database.engine import Base
 
 
-class EmployeeModel(Base):
-    __tablename__ = "employees"
+class ResourceProfileModel(Base):
+    __tablename__ = "resource_profiles"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
@@ -19,7 +19,7 @@ class EmployeeModel(Base):
     manager_user_id: Mapped[int | None] = mapped_column(
         BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    is_available: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=text("NOW()")
     )
@@ -30,17 +30,17 @@ class EmployeeModel(Base):
         onupdate=datetime.utcnow,
     )
 
-    employee_skills: Mapped[list["EmployeeSkillModel"]] = relationship(
-        "EmployeeSkillModel", back_populates="employee", lazy="noload"
+    resource_skills: Mapped[list["ResourceSkillModel"]] = relationship(
+        "ResourceSkillModel", back_populates="resource_profile", lazy="noload"
     )
 
 
-class EmployeeSkillModel(Base):
-    __tablename__ = "employee_skills"
+class ResourceSkillModel(Base):
+    __tablename__ = "resource_skills"
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
-    employee_id: Mapped[int] = mapped_column(
-        BigInteger, ForeignKey("employees.id", ondelete="CASCADE"), nullable=False
+    resource_profile_id: Mapped[int] = mapped_column(
+        BigInteger, ForeignKey("resource_profiles.id", ondelete="CASCADE"), nullable=False
     )
     skill_id: Mapped[int] = mapped_column(
         BigInteger, ForeignKey("skills.id", ondelete="RESTRICT"), nullable=False
@@ -56,6 +56,11 @@ class EmployeeSkillModel(Base):
         onupdate=datetime.utcnow,
     )
 
-    employee: Mapped["EmployeeModel"] = relationship(
-        "EmployeeModel", back_populates="employee_skills"
+    resource_profile: Mapped["ResourceProfileModel"] = relationship(
+        "ResourceProfileModel", back_populates="resource_skills"
     )
+
+
+# Backward-compatible aliases — remove after all callers updated
+EmployeeModel = ResourceProfileModel
+EmployeeSkillModel = ResourceSkillModel

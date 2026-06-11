@@ -108,10 +108,9 @@ def _skill_to_response(skill: Skill) -> SkillResponse:
 
 
 def _emp_skill_to_response(es) -> EmployeeSkillResponse:  # type: ignore[no-untyped-def]
-    from src.domain.entities.skill import EmployeeSkill
     return EmployeeSkillResponse(
         id=es.id,
-        employee_id=es.employee_id,
+        resource_profile_id=es.resource_profile_id,
         skill_id=es.skill_id,
         skill_name=es.skill_name,
         proficiency=es.proficiency,

@@ -35,13 +35,14 @@ class CreateProjectUseCase:
             )
 
         # 3. Manager must have MANAGER role
-        if manager.role != Role.MANAGER:
+        manager_role = await self._users.find_active_role(request.manager_user_id)
+        if manager_role != Role.MANAGER:
             raise InvalidProjectManagerError(
                 f"User {manager.username} does not have the MANAGER role."
             )
 
         # 4. Manager must be active
-        if not manager.is_active:
+        if not manager.is_account_enabled:
             raise InvalidProjectManagerError(
                 f"Manager {manager.username} is inactive."
             )

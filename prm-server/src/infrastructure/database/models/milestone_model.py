@@ -18,6 +18,7 @@ class MilestoneModel(Base):
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     story_points: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    completed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=text("NOW()")
     )

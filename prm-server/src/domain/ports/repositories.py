@@ -2,12 +2,16 @@ from abc import ABC, abstractmethod
 from datetime import date
 
 from src.domain.entities.allocation import Allocation
-from src.domain.entities.employee import Employee
+from src.domain.entities.resource_profile import ResourceProfile, ResourceSkill
 from src.domain.entities.milestone import Milestone
 from src.domain.entities.project import Project
-from src.domain.entities.skill import EmployeeSkill, Skill
+from src.domain.entities.skill import Skill
 from src.domain.entities.user import User
 from src.domain.enums import AllocationStatus, MilestoneStatus, ProficiencyLevel, ProjectStatus, Role
+
+# Backward-compatible alias
+Employee = ResourceProfile
+EmployeeSkill = ResourceSkill
 
 
 class IUserRepository(ABC):
@@ -37,7 +41,7 @@ class IUserRepository(ABC):
     async def find_all(
         self,
         role: Role | None = None,
-        is_active: bool | None = None,
+        is_account_enabled: bool | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[list[User], int]:
@@ -48,17 +52,32 @@ class IUserRepository(ABC):
         """Return User if email matches, None otherwise."""
 
     @abstractmethod
-    async def update_active(self, user_id: int, is_active: bool) -> None:
-        """Toggle is_active flag."""
+    async def update_active(self, user_id: int, is_account_enabled: bool) -> None:
+        """Toggle is_account_enabled flag."""
+
+    @abstractmethod
+    async def find_active_role(self, user_id: int) -> Role | None:
+        """Return currently active Role from user_roles (to_date IS NULL), or None."""
+
+    @abstractmethod
+    async def assign_role(
+        self,
+        user_id: int,
+        role: Role,
+        from_date: date,
+        granted_by_user_id: int | None,
+        reason: str | None,
+    ) -> None:
+        """Insert a new user_roles row for the given role (closes previous active row)."""
 
 
 class IEmployeeRepository(ABC):
 
     @abstractmethod
-    async def find_by_id(self, employee_id: int) -> Employee | None: ...
+    async def find_by_id(self, employee_id: int) -> ResourceProfile | None: ...
 
     @abstractmethod
-    async def find_by_user_id(self, user_id: int) -> Employee | None: ...
+    async def find_by_user_id(self, user_id: int) -> ResourceProfile | None: ...
 
     @abstractmethod
     async def find_all(
@@ -67,10 +86,10 @@ class IEmployeeRepository(ABC):
         manager_user_id: int | None = None,
         page: int = 1,
         page_size: int = 20,
-    ) -> tuple[list[Employee], int]: ...
+    ) -> tuple[list[ResourceProfile], int]: ...
 
     @abstractmethod
-    async def save(self, employee: Employee) -> Employee: ...
+    async def save(self, employee: ResourceProfile) -> ResourceProfile: ...
 
     @abstractmethod
     async def update_active(self, employee_id: int, is_active: bool) -> None: ...
@@ -81,12 +100,12 @@ class IEmployeeRepository(ABC):
     ) -> None: ...
 
     @abstractmethod
-    async def find_skills(self, employee_id: int) -> list[EmployeeSkill]: ...
+    async def find_skills(self, employee_id: int) -> list[ResourceSkill]: ...
 
     @abstractmethod
     async def find_employee_skill(
         self, employee_id: int, skill_id: int
-    ) -> EmployeeSkill | None: ...
+    ) -> ResourceSkill | None: ...
 
     @abstractmethod
     async def add_skill(
@@ -94,7 +113,7 @@ class IEmployeeRepository(ABC):
         employee_id: int,
         skill_id: int,
         proficiency: ProficiencyLevel,
-    ) -> EmployeeSkill: ...
+    ) -> ResourceSkill: ...
 
     @abstractmethod
     async def update_skill_proficiency(
@@ -107,8 +126,8 @@ class IEmployeeRepository(ABC):
     async def remove_skill(self, employee_skill_id: int) -> None: ...
 
     @abstractmethod
-    async def find_by_manager(self, manager_user_id: int) -> list[Employee]:
-        """Return all active employees whose manager_user_id matches."""
+    async def find_by_manager(self, manager_user_id: int) -> list[ResourceProfile]:
+        """Return all active resource profiles whose manager_user_id matches."""
         ...
 
 

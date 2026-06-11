@@ -3,7 +3,6 @@ from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 
 from src.config import settings
-from src.domain.enums import Role
 from src.domain.exceptions import AuthorizationError
 
 
@@ -11,11 +10,11 @@ def _utcnow() -> datetime:
     return datetime.now(tz=timezone.utc)
 
 
-def create_access_token(user_id: int, role: Role) -> str:
+def create_access_token(user_id: int, role_name: str) -> str:
     expire = _utcnow() + timedelta(minutes=settings.jwt_access_token_ttl_minutes)
     payload = {
         "sub": str(user_id),
-        "role": role.value,
+        "role": role_name,
         "exp": expire,
         "type": "access",
     }

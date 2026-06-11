@@ -13,5 +13,6 @@ class Milestone:
     due_date: date | None
     status: MilestoneStatus
     story_points: int                     # points this milestone contributes when DONE
+    completed_date: date | None
     created_at: datetime
     updated_at: datetime

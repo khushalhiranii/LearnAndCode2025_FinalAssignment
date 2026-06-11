@@ -36,14 +36,14 @@ async def create_user(
 @router.get("", response_model=dict)
 async def list_users(
     role: Role | None = Query(None),
-    is_active: bool | None = Query(None),
+    is_account_enabled: bool | None = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     current_user: User = Depends(require_admin),
     uow: UnitOfWork = Depends(get_unit_of_work),
 ) -> dict:
     use_case = ListUsersUseCase(uow.users)
-    result = await use_case.execute(role=role, is_active=is_active, page=page, page_size=page_size)
+    result = await use_case.execute(role=role, is_account_enabled=is_account_enabled, page=page, page_size=page_size)
     return {"success": True, "data": result.model_dump()}
 
 

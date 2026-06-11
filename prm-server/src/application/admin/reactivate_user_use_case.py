@@ -18,19 +18,20 @@ class ReactivateUserUseCase:
         if user is None:
             raise UserNotFoundError(f"User {target_user_id} not found.")
 
-        await self._users.update_active(target_user_id, is_active=True)
+        await self._users.update_active(target_user_id, is_account_enabled=True)
 
         employee = await self._employees.find_by_user_id(target_user_id)
         if employee is not None:
             await self._employees.update_active(employee.id, is_active=True)  # type: ignore[arg-type]
 
+        active_role = await self._users.find_active_role(target_user_id)
         return UserResponse(
             id=user.id,  # type: ignore[arg-type]
             username=user.username,
             email=user.email,
             full_name=user.full_name,
-            role=user.role,
-            is_active=True,
+            role=active_role,
+            is_account_enabled=True,
             force_password_change=user.force_password_change,
             created_at=user.created_at,
             updated_at=user.updated_at,

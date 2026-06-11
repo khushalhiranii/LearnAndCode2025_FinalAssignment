@@ -51,17 +51,17 @@ class AllocationUseCase:
                 "from_date must be strictly before to_date."
             )
 
-        # 2. Employee must exist and belong to this manager
-        employee = await self._employees.find_by_id(request.employee_id)
+        # 2. Resource profile must exist and belong to this manager
+        employee = await self._employees.find_by_id(request.resource_profile_id)
         if employee is None:
-            raise EmployeeNotFoundError(f"Employee {request.employee_id} not found.")
+            raise EmployeeNotFoundError(f"Employee {request.resource_profile_id} not found.")
         if employee.manager_user_id != manager_user_id:
             raise AuthorizationError(
                 "You can only allocate employees from your own team."
             )
-        if not employee.is_active:
+        if not employee.is_available:
             raise EmployeeNotFoundError(
-                f"Employee {request.employee_id} is inactive."
+                f"Employee {request.resource_profile_id} is inactive."
             )
 
         # 3. Project must exist, be ACTIVE, and belong to this manager
@@ -80,7 +80,7 @@ class AllocationUseCase:
 
         # 4. Utilization overlap check
         active_allocations = await self._allocations.find_active_by_employee(
-            request.employee_id
+            request.resource_profile_id
         )
         current_total = sum(a.utilization_percent for a in active_allocations)
         if current_total + request.utilization_percent > 100:
@@ -93,7 +93,7 @@ class AllocationUseCase:
         now = datetime.now(timezone.utc)
         allocation = Allocation(
             id=None,
-            employee_id=request.employee_id,
+            resource_profile_id=request.resource_profile_id,
             project_id=request.project_id,
             utilization_percent=request.utilization_percent,
             from_date=request.from_date,
@@ -121,8 +121,8 @@ class AllocationUseCase:
                 f"Allocation {allocation_id} is already ended."
             )
 
-        # Scope check: confirm employee belongs to this manager
-        employee = await self._employees.find_by_id(allocation.employee_id)
+        # Scope check: confirm resource profile belongs to this manager
+        employee = await self._employees.find_by_id(allocation.resource_profile_id)
         if employee is None or employee.manager_user_id != manager_user_id:
             raise AuthorizationError(
                 "You can only end allocations for employees you manage."
@@ -154,7 +154,7 @@ class AllocationUseCase:
 
             team_rows.append(
                 EmployeeDashboardRow(
-                    employee_id=emp.id,
+                    resource_profile_id=emp.id,
                     full_name=emp.full_name,
                     designation=emp.designation,
                     department=emp.department,
@@ -176,7 +176,7 @@ class AllocationUseCase:
 def _to_allocation_response(allocation: Allocation) -> AllocationResponse:
     return AllocationResponse(
         id=allocation.id,
-        employee_id=allocation.employee_id,
+        resource_profile_id=allocation.resource_profile_id,
         project_id=allocation.project_id,
         utilization_percent=allocation.utilization_percent,
         from_date=allocation.from_date,

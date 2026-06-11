@@ -29,9 +29,14 @@ class ChangePasswordUseCase:
         if updated_user is None:
             raise UserNotFoundError(f"User {user_id} not found after update.")
 
-        access_token = create_access_token(updated_user.id, updated_user.role)  # type: ignore[arg-type]
+        role = await self._user_repo.find_active_role(user_id)  # type: ignore[arg-type]
+        if role is None:
+            from src.domain.exceptions import InactiveUserError
+            raise InactiveUserError("No active role assigned to this account.")
+
+        access_token = create_access_token(updated_user.id, role.value)  # type: ignore[arg-type]
         return ChangePasswordResponse(
             access_token=access_token,
-            role=updated_user.role.value,
+            role=role.value,
             full_name=updated_user.full_name,
         )

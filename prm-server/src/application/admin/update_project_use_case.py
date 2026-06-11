@@ -40,11 +40,12 @@ class UpdateProjectUseCase:
                 raise UserNotFoundError(
                     f"User {request.manager_user_id} not found."
                 )
-            if manager.role != Role.MANAGER:
+            manager_role = await self._users.find_active_role(request.manager_user_id)
+            if manager_role != Role.MANAGER:
                 raise InvalidProjectManagerError(
                     f"User {manager.username} does not have the MANAGER role."
                 )
-            if not manager.is_active:
+            if not manager.is_account_enabled:
                 raise InvalidProjectManagerError(
                     f"Manager {manager.username} is inactive."
                 )

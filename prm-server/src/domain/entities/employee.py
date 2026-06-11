@@ -1,17 +1,10 @@
-from dataclasses import dataclass
-from datetime import date, datetime
+# V6: Employee entity renamed to ResourceProfile.
+# This file re-exports from resource_profile.py for backward compatibility.
+# All new code should import from src.domain.entities.resource_profile directly.
+from src.domain.entities.resource_profile import (  # noqa: F401
+    ResourceProfile,
+    ResourceSkill,
+    Employee,
+    EmployeeSkill,
+)
 
-
-@dataclass
-class Employee:
-    id: int | None
-    user_id: int
-    full_name: str           # denormalised from User for fast display
-    email: str               # denormalised from User
-    department: str | None
-    designation: str | None
-    date_of_joining: date | None
-    manager_user_id: int | None   # FK → users.id where role=MANAGER
-    is_active: bool
-    created_at: datetime
-    updated_at: datetime

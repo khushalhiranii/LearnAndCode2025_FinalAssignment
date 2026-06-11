@@ -27,24 +27,53 @@ async def get_current_user(
     payload = decode_access_token(token)
     user_id = int(payload["sub"])
     user = await user_repo.find_by_id(user_id)
-    if user is None or not user.is_active:
+    if user is None or not user.is_account_enabled:
         raise AuthorizationError("User account not found or inactive.")
     return user
 
 
-async def require_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != Role.ADMIN:
+def _require_role(role: Role):
+    async def _dependency(
+        authorization: str = Header(..., alias="Authorization"),
+        current_user: User = Depends(get_current_user),
+    ) -> User:
+        token = authorization.removeprefix("Bearer ")
+        payload = decode_access_token(token)
+        role_in_token = payload.get("role", "")
+        if role_in_token != role.value:
+            raise AuthorizationError(f"{role.value.capitalize()} role required.")
+        return current_user
+    return _dependency
+
+
+async def require_admin(
+    authorization: str = Header(..., alias="Authorization"),
+    current_user: User = Depends(get_current_user),
+) -> User:
+    token = authorization.removeprefix("Bearer ")
+    payload = decode_access_token(token)
+    if payload.get("role") != Role.ADMIN.value:
         raise AuthorizationError("Admin role required.")
     return current_user
 
 
-async def require_manager(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != Role.MANAGER:
+async def require_manager(
+    authorization: str = Header(..., alias="Authorization"),
+    current_user: User = Depends(get_current_user),
+) -> User:
+    token = authorization.removeprefix("Bearer ")
+    payload = decode_access_token(token)
+    if payload.get("role") != Role.MANAGER.value:
         raise AuthorizationError("Manager role required.")
     return current_user
 
 
-async def require_employee(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != Role.EMPLOYEE:
+async def require_employee(
+    authorization: str = Header(..., alias="Authorization"),
+    current_user: User = Depends(get_current_user),
+) -> User:
+    token = authorization.removeprefix("Bearer ")
+    payload = decode_access_token(token)
+    if payload.get("role") != Role.EMPLOYEE.value:
         raise AuthorizationError("Employee role required.")
     return current_user

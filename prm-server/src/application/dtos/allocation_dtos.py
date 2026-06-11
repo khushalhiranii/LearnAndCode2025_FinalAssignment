@@ -8,7 +8,7 @@ from src.domain.enums import AllocationStatus
 # ─── Allocation requests ─────────────────────────────────────────────────────
 
 class AllocateEmployeeRequest(BaseModel):
-    employee_id: int
+    resource_profile_id: int
     project_id: int
     utilization_percent: int = Field(..., ge=1, le=100)
     from_date: date
@@ -23,7 +23,7 @@ class EndAllocationRequest(BaseModel):
 
 class AllocationResponse(BaseModel):
     id: int
-    employee_id: int
+    resource_profile_id: int
     project_id: int
     utilization_percent: int
     from_date: date
@@ -36,7 +36,7 @@ class AllocationResponse(BaseModel):
 # ─── Dashboard responses ──────────────────────────────────────────────────────
 
 class EmployeeDashboardRow(BaseModel):
-    employee_id: int
+    resource_profile_id: int
     full_name: str
     designation: str | None
     department: str | None

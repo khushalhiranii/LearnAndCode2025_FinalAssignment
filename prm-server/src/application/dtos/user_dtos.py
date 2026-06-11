@@ -17,8 +17,8 @@ class UserResponse(BaseModel):
     username: str
     email: str
     full_name: str
-    role: Role
-    is_active: bool
+    role: Role | None
+    is_account_enabled: bool
     force_password_change: bool
     created_at: datetime
     updated_at: datetime
