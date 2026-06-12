@@ -3,6 +3,7 @@ from src.domain.entities.resource_profile import ResourceProfile
 from src.domain.enums import Role
 from src.domain.exceptions import EmployeeNotFoundError, InvalidManagerError, UserNotFoundError
 from src.domain.ports.repositories import IEmployeeRepository, IUserRepository
+from src.infrastructure.database.resource_hierarchy_service import ResourceHierarchyService
 
 
 class AssignManagerUseCase:
@@ -11,9 +12,11 @@ class AssignManagerUseCase:
         self,
         user_repo: IUserRepository,
         employee_repo: IEmployeeRepository,
+        hierarchy_service: ResourceHierarchyService | None = None,
     ) -> None:
         self._users = user_repo
         self._employees = employee_repo
+        self._hierarchy = hierarchy_service
 
     async def execute(
         self,
@@ -38,6 +41,9 @@ class AssignManagerUseCase:
                 raise InvalidManagerError("The designated manager is inactive.")
 
         await self._employees.update_manager(employee_id, manager_user_id)
+
+        if self._hierarchy is not None:
+            await self._hierarchy.rebuild_for_profile(employee_id, manager_user_id)
 
         user = await self._users.find_by_id(employee.user_id)
         employee.manager_user_id = manager_user_id

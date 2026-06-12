@@ -11,20 +11,20 @@ from src.application.manager.allocation_use_case import AllocationUseCase, _to_a
 from src.domain.entities.user import User
 from src.infrastructure.unit_of_work import UnitOfWork, get_unit_of_work
 
-router = APIRouter(prefix="/manager", tags=["manager-allocations"])
+router = APIRouter(tags=["allocations"])
 
 
-@router.get("/dashboard", response_model=ResourceDashboardResponse)
+@router.get("/manager/dashboard", response_model=ResourceDashboardResponse)
 async def get_dashboard(
     current_user: User = Depends(require_manager),
     uow: UnitOfWork = Depends(get_unit_of_work),
 ) -> ResourceDashboardResponse:
-    use_case = AllocationUseCase(uow.allocations, uow.employees, uow.projects)
+    use_case = AllocationUseCase(uow.allocations, uow.employees, uow.projects, uow.users)
     return await use_case.get_dashboard(current_user.id)
 
 
 @router.post(
-    "/allocations",
+    "/manager/allocations",
     response_model=AllocationResponse,
     status_code=status.HTTP_201_CREATED,
 )
@@ -33,11 +33,11 @@ async def allocate_employee(
     current_user: User = Depends(require_manager),
     uow: UnitOfWork = Depends(get_unit_of_work),
 ) -> AllocationResponse:
-    use_case = AllocationUseCase(uow.allocations, uow.employees, uow.projects)
+    use_case = AllocationUseCase(uow.allocations, uow.employees, uow.projects, uow.users)
     return await use_case.allocate(current_user.id, request)
 
 
-@router.get("/allocations", response_model=list[AllocationResponse])
+@router.get("/manager/allocations", response_model=list[AllocationResponse])
 async def list_my_allocations(
     current_user: User = Depends(require_manager),
     uow: UnitOfWork = Depends(get_unit_of_work),
@@ -52,7 +52,7 @@ async def list_my_allocations(
 
 
 @router.patch(
-    "/allocations/{allocation_id}/end",
+    "/manager/allocations/{allocation_id}/end",
     response_model=AllocationResponse,
 )
 async def end_allocation(
@@ -61,29 +61,8 @@ async def end_allocation(
     current_user: User = Depends(require_manager),
     uow: UnitOfWork = Depends(get_unit_of_work),
 ) -> AllocationResponse:
-    use_case = AllocationUseCase(uow.allocations, uow.employees, uow.projects)
+    use_case = AllocationUseCase(uow.allocations, uow.employees, uow.projects, uow.users)
     return await use_case.end_allocation(current_user.id, allocation_id, request)
-
-
-@router.get("/projects", response_model=list[dict])
-async def list_my_projects(
-    current_user: User = Depends(require_manager),
-    uow: UnitOfWork = Depends(get_unit_of_work),
-) -> list[dict]:
-    """Return projects managed by the current user (all statuses)."""
-    projects_result, _ = await uow.projects.find_all(
-        manager_user_id=current_user.id, page=1, page_size=100
-    )
-    return [
-        {
-            "id": p.id,
-            "name": p.name,
-            "status": p.status.value,
-            "total_story_points": p.total_story_points,
-            "completed_story_points": p.completed_story_points,
-        }
-        for p in projects_result
-    ]
 
 
 @router.get("/admin/allocations", response_model=list[AllocationResponse], tags=["admin-allocations"])

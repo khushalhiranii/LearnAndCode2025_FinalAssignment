@@ -172,8 +172,7 @@ async def test_deactivate_user_sets_inactive():
         email="target@example.com",
         username="target",
         password_hash="x",
-        role=Role.EMPLOYEE,
-        is_active=True,
+        is_account_enabled=True,
         force_password_change=False,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
@@ -183,9 +182,9 @@ async def test_deactivate_user_sets_inactive():
     use_case = DeactivateUserUseCase(user_repo, emp_repo)
     result = await use_case.execute(saved_target.id, acting_admin_id=admin.id)
 
-    assert result.is_active is False
+    assert result.is_account_enabled is False
     stored = await user_repo.find_by_id(saved_target.id)
-    assert stored.is_active is False
+    assert stored.is_account_enabled is False
 
 
 @pytest.mark.asyncio
@@ -225,8 +224,7 @@ async def test_reactivate_user_sets_active():
         email="d@example.com",
         username="duser",
         password_hash="x",
-        role=Role.EMPLOYEE,
-        is_active=False,
+        is_account_enabled=False,
         force_password_change=False,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
@@ -236,7 +234,7 @@ async def test_reactivate_user_sets_active():
     use_case = ReactivateUserUseCase(user_repo, emp_repo)
     result = await use_case.execute(saved.id)
 
-    assert result.is_active is True
+    assert result.is_account_enabled is True
 
 
 # ── ResetPasswordUseCase ─────────────────────────────────────────────────────
@@ -273,20 +271,20 @@ async def test_reset_password_raises_for_unknown_user():
 async def test_list_users_returns_all():
     user_repo = InMemoryUserRepository()
     for i in range(3):
-        await user_repo.save(
+        saved = await user_repo.save(
             User(
                 id=None,
                 full_name=f"User {i}",
                 email=f"u{i}@example.com",
                 username=f"u{i}",
                 password_hash="x",
-                role=Role.EMPLOYEE,
-                is_active=True,
+                is_account_enabled=True,
                 force_password_change=False,
                 created_at=datetime.now(timezone.utc),
                 updated_at=datetime.now(timezone.utc),
             )
         )
+        await user_repo.assign_role(saved.id, Role.EMPLOYEE, __import__("datetime").date.today(), None, None)
 
     use_case = ListUsersUseCase(user_repo)
     result = await use_case.execute()
@@ -298,34 +296,34 @@ async def test_list_users_returns_all():
 @pytest.mark.asyncio
 async def test_list_users_filters_by_role():
     user_repo = InMemoryUserRepository()
-    await user_repo.save(
+    admin_saved = await user_repo.save(
         User(
             id=None,
             full_name="Admin",
             email="admin@x.com",
             username="admin",
             password_hash="x",
-            role=Role.ADMIN,
-            is_active=True,
+            is_account_enabled=True,
             force_password_change=False,
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
     )
-    await user_repo.save(
+    await user_repo.assign_role(admin_saved.id, Role.ADMIN, __import__("datetime").date.today(), None, None)
+    emp_saved = await user_repo.save(
         User(
             id=None,
             full_name="Employee",
             email="emp@x.com",
             username="emp",
             password_hash="x",
-            role=Role.EMPLOYEE,
-            is_active=True,
+            is_account_enabled=True,
             force_password_change=False,
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
     )
+    await user_repo.assign_role(emp_saved.id, Role.EMPLOYEE, __import__("datetime").date.today(), None, None)
 
     use_case = ListUsersUseCase(user_repo)
     result = await use_case.execute(role=Role.EMPLOYEE)

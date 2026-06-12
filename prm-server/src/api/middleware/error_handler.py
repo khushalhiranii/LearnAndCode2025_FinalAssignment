@@ -20,7 +20,12 @@ from src.domain.exceptions import (
     InvalidManagerError,
     InvalidProjectManagerError,
     MilestoneNotFoundError,
+    DuplicateTimesheetError,
+    FutureWeekError,
+    HoursCapExceededError,
+    InvalidActivityTagError,
     ProjectNotActiveError,
+    ProjectNotAllocatedError,
     ProjectNotFoundError,
     SkillNotFoundError,
     UserNotFoundError,
@@ -291,6 +296,66 @@ def register_exception_handlers(app: FastAPI) -> None:
             content={
                 "success": False,
                 "error": {"code": "PROJECT_NOT_ACTIVE", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(DuplicateTimesheetError)
+    async def handle_duplicate_timesheet(
+        request: Request, exc: DuplicateTimesheetError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=409,
+            content={
+                "success": False,
+                "error": {"code": "DUPLICATE_TIMESHEET", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(FutureWeekError)
+    async def handle_future_week(
+        request: Request, exc: FutureWeekError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "error": {"code": "FUTURE_WEEK", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(ProjectNotAllocatedError)
+    async def handle_project_not_allocated(
+        request: Request, exc: ProjectNotAllocatedError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "error": {"code": "PROJECT_NOT_ALLOCATED", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(HoursCapExceededError)
+    async def handle_hours_cap_exceeded(
+        request: Request, exc: HoursCapExceededError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "error": {"code": "HOURS_CAP_EXCEEDED", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(InvalidActivityTagError)
+    async def handle_invalid_activity_tag(
+        request: Request, exc: InvalidActivityTagError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "error": {"code": "INVALID_ACTIVITY_TAG", "message": str(exc)},
             },
         )
 

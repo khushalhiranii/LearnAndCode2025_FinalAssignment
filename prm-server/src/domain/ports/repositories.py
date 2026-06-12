@@ -7,6 +7,9 @@ from src.domain.entities.milestone import Milestone
 from src.domain.entities.project import Project
 from src.domain.entities.skill import Skill
 from src.domain.entities.user import User
+from src.domain.entities.system_config import SystemConfig
+from src.domain.entities.project_health import AISuggestionAudit, ProjectHealthSnapshot
+from src.domain.entities.timesheet import Timesheet, ActivityTag
 from src.domain.enums import AllocationStatus, MilestoneStatus, ProficiencyLevel, ProjectStatus, Role
 
 # Backward-compatible alias
@@ -157,6 +160,15 @@ class IAllocationRepository(ABC):
         ...
 
     @abstractmethod
+    async def find_active_by_employee_and_week(
+        self,
+        employee_id: int,
+        week_start: date,
+    ) -> list[Allocation]:
+        """Return ACTIVE allocations for the employee whose date range covers week_start."""
+        ...
+
+    @abstractmethod
     async def find_by_project(
         self,
         project_id: int,
@@ -233,3 +245,74 @@ class IMilestoneRepository(ABC):
     async def sum_done_story_points(self, project_id: int) -> int:
         """Return the sum of story_points for all DONE milestones in this project."""
         ...
+
+
+class ISystemConfigRepository(ABC):
+
+    @abstractmethod
+    async def get_config(self) -> SystemConfig:
+        """Return the system configuration. Creates defaults if none exist."""
+
+    @abstractmethod
+    async def update_config(self, config: SystemConfig) -> SystemConfig:
+        """Updates the system configuration."""
+
+
+class ITimesheetRepository(ABC):
+
+    @abstractmethod
+    async def find_by_id(self, timesheet_id: int) -> Timesheet | None:
+        """Return full Timesheet with entries and tags populated, or None."""
+        ...
+
+    @abstractmethod
+    async def find_by_employee_and_week(
+        self,
+        employee_id: int,
+        week_start: date,
+    ) -> Timesheet | None:
+        """Return the timesheet for this employee+week, or None if not submitted."""
+        ...
+
+    @abstractmethod
+    async def find_by_employee(self, employee_id: int) -> list[Timesheet]:
+        """Return all timesheets for the employee, entries list is empty (summary only)."""
+        ...
+
+    @abstractmethod
+    async def save(self, timesheet: Timesheet) -> Timesheet:
+        """Persist the Timesheet with all entries and tags atomically. Returns saved entity."""
+        ...
+
+
+class IActivityTagRepository(ABC):
+
+    @abstractmethod
+    async def find_all_active(self) -> list[ActivityTag]:
+        """Return all active activity tags ordered by name."""
+        ...
+
+    @abstractmethod
+    async def find_by_ids(self, ids: list[int]) -> list[ActivityTag]:
+        """Return tags matching the given IDs. Missing IDs are silently omitted."""
+        ...
+
+
+class IProjectHealthRepository(ABC):
+
+    @abstractmethod
+    async def save_snapshot(self, snapshot: ProjectHealthSnapshot) -> ProjectHealthSnapshot: ...
+
+    @abstractmethod
+    async def find_latest_by_project(self, project_id: int) -> ProjectHealthSnapshot | None: ...
+
+    @abstractmethod
+    async def find_latest_by_projects(
+        self, project_ids: list[int]
+    ) -> dict[int, ProjectHealthSnapshot]: ...
+
+
+class IAISuggestionAuditRepository(ABC):
+
+    @abstractmethod
+    async def save(self, audit: AISuggestionAudit) -> AISuggestionAudit: ...

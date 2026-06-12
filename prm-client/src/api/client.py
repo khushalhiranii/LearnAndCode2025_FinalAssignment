@@ -45,9 +45,28 @@ class SessionState:
 session = SessionState()
 
 
+def _raise_on_error(response: httpx.Response) -> None:
+    if response.is_error:
+        try:
+            response.read()
+            data = response.json()
+            if "error" in data and "message" in data["error"]:
+                raise RuntimeError(data["error"]["message"])
+            if "detail" in data:
+                if isinstance(data["detail"], list) and len(data["detail"]) > 0 and "msg" in data["detail"][0]:
+                    raise RuntimeError(data["detail"][0]["msg"])
+                raise RuntimeError(str(data["detail"]))
+        except RuntimeError:
+            raise
+        except Exception:
+            pass
+        response.raise_for_status()
+
+
 def get_client() -> httpx.Client:
     """Return a synchronous HTTP client pointed at the configured server."""
     return httpx.Client(
         base_url=settings.prm_server_base_url,
         timeout=10.0,
+        event_hooks={'response': [_raise_on_error]}
     )

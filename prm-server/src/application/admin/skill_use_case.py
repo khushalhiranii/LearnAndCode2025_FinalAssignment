@@ -39,6 +39,7 @@ class SkillUseCase:
             id=None,
             name=request.name,
             category=request.category,
+            is_active=True,
             created_at=now,
             updated_at=now,
         )

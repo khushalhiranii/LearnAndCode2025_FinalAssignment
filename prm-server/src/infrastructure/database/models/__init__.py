@@ -11,3 +11,14 @@ from src.infrastructure.database.models.resource_hierarchy_model import Resource
 from src.infrastructure.database.models.project_model import ProjectModel  # noqa: F401
 from src.infrastructure.database.models.milestone_model import MilestoneModel  # noqa: F401
 from src.infrastructure.database.models.allocation_model import AllocationModel  # noqa: F401
+from src.infrastructure.database.models.system_config_model import SystemConfigModel  # noqa: F401
+from src.infrastructure.database.models.timesheet_model import (  # noqa: F401
+    ActivityTagModel,
+    TimesheetModel,
+    TimesheetEntryModel,
+    TimesheetEntryActivityTagModel,
+)
+from src.infrastructure.database.models.project_health_model import (  # noqa: F401
+    ProjectHealthSnapshotModel,
+    AISuggestionAuditModel,
+)

@@ -102,3 +102,33 @@ class InvalidAllocationDateError(DomainException):
 
 class ProjectNotActiveError(DomainException):
     """Allocations can only be made to projects with ACTIVE status."""
+
+
+# --- Sprint 5 additions ---
+
+class TimesheetNotFoundError(DomainException):
+    """No timesheet found for the given identifier."""
+
+
+class DuplicateTimesheetError(DomainException):
+    """A timesheet for this employee and week already exists."""
+
+
+class FutureWeekError(DomainException):
+    """Timesheets cannot be submitted for a future week."""
+
+
+class ProjectNotAllocatedError(DomainException):
+    """Employee does not have an active allocation for this project in the given week."""
+
+
+class HoursCapExceededError(DomainException):
+    """Hours logged exceed the configured per-project or weekly maximum."""
+
+
+class InvalidActivityTagError(DomainException):
+    """One or more activity tag IDs are invalid or inactive."""
+
+
+class AIProviderError(DomainException):
+    """LLM provider call failed after retries."""

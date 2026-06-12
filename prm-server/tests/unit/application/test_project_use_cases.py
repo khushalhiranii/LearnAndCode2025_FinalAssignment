@@ -32,8 +32,7 @@ from tests.conftest import (
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
-def _make_manager_user(user_id: int = 2) -> object:
-    """Return an active MANAGER user via make_admin_user with role patched."""
+def _make_manager_user(user_id: int = 2):
     from src.domain.entities.user import User
     from datetime import datetime, timezone
     now = datetime.now(timezone.utc)
@@ -42,13 +41,21 @@ def _make_manager_user(user_id: int = 2) -> object:
         full_name="Alice Manager",
         email=f"alice{user_id}@example.com",
         username=f"alice{user_id}",
-        password_hash=b"x",
-        role=Role.MANAGER,
-        is_active=True,
+        password_hash="x",
+        is_account_enabled=True,
         force_password_change=False,
         created_at=now,
         updated_at=now,
     )
+
+
+async def _save_manager(user_repo: InMemoryUserRepository, user_id: int = 2):
+    from datetime import date
+    from src.domain.enums import Role
+    manager = _make_manager_user(user_id)
+    await user_repo.save(manager)
+    await user_repo.assign_role(user_id, Role.MANAGER, date.today(), None, None)
+    return manager
 
 
 # ── CreateProject tests ───────────────────────────────────────────────────────
@@ -57,8 +64,7 @@ def _make_manager_user(user_id: int = 2) -> object:
 async def test_create_project_returns_response():
     project_repo = InMemoryProjectRepository()
     user_repo = InMemoryUserRepository()
-    manager = _make_manager_user()
-    await user_repo.save(manager)
+    manager = await _save_manager(user_repo)
 
     use_case = CreateProjectUseCase(project_repo, user_repo)
     req = CreateProjectRequest(name="Alpha", manager_user_id=manager.id)
@@ -73,8 +79,7 @@ async def test_create_project_returns_response():
 async def test_create_project_raises_duplicate_name():
     project_repo = InMemoryProjectRepository()
     user_repo = InMemoryUserRepository()
-    manager = _make_manager_user()
-    await user_repo.save(manager)
+    manager = await _save_manager(user_repo)
     existing = make_project(name="Alpha", manager_user_id=manager.id)
     await project_repo.save(existing)
 
@@ -86,8 +91,10 @@ async def test_create_project_raises_duplicate_name():
 async def test_create_project_invalid_manager_role_raises():
     project_repo = InMemoryProjectRepository()
     user_repo = InMemoryUserRepository()
-    admin = make_admin_user()  # role=ADMIN, not MANAGER
+    admin = make_admin_user()
     await user_repo.save(admin)
+    from datetime import date
+    await user_repo.assign_role(admin.id, Role.ADMIN, date.today(), None, None)
 
     use_case = CreateProjectUseCase(project_repo, user_repo)
     with pytest.raises(InvalidProjectManagerError):
@@ -102,10 +109,12 @@ async def test_create_project_inactive_manager_raises():
     now = datetime.now(timezone.utc)
     inactive_manager = User(
         id=5, full_name="Bob", email="bob@x.com", username="bob",
-        password_hash=b"x", role=Role.MANAGER, is_active=False,
+        password_hash="x", is_account_enabled=False,
         force_password_change=False, created_at=now, updated_at=now,
     )
     await user_repo.save(inactive_manager)
+    from datetime import date
+    await user_repo.assign_role(5, Role.MANAGER, date.today(), None, None)
 
     use_case = CreateProjectUseCase(project_repo, user_repo)
     with pytest.raises(InvalidProjectManagerError):
@@ -118,8 +127,7 @@ async def test_create_project_inactive_manager_raises():
 async def test_update_project_partial_update_name():
     project_repo = InMemoryProjectRepository()
     user_repo = InMemoryUserRepository()
-    manager = _make_manager_user()
-    await user_repo.save(manager)
+    manager = await _save_manager(user_repo)
     project = make_project(name="Old Name", manager_user_id=manager.id)
     await project_repo.save(project)
 
@@ -133,8 +141,7 @@ async def test_update_project_partial_update_name():
 async def test_update_project_duplicate_name_raises():
     project_repo = InMemoryProjectRepository()
     user_repo = InMemoryUserRepository()
-    manager = _make_manager_user()
-    await user_repo.save(manager)
+    manager = await _save_manager(user_repo)
     p1 = make_project(project_id=1, name="Taken", manager_user_id=manager.id)
     p2 = make_project(project_id=2, name="Other", manager_user_id=manager.id)
     await project_repo.save(p1)

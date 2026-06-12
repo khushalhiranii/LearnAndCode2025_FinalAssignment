@@ -1,104 +1,164 @@
-"""Admin user management screen."""
+"""Admin users management console screen."""
 
 from __future__ import annotations
 
 from rich.console import Console
-from rich.table import Table
 
 from src.api import admin_api
 
 console = Console()
 
+_ROLES = ["ADMIN", "MANAGER", "EMPLOYEE"]
+
 
 def users_screen() -> None:
-    """Admin sub-menu for user management."""
+    """Admin users menu loop."""
     while True:
-        console.print("\n[bold cyan]User Management[/bold cyan]")
-        console.print("  [1] List users")
-        console.print("  [2] Create user")
-        console.print("  [3] Deactivate user")
-        console.print("  [4] Reactivate user")
-        console.print("  [5] Reset user password")
-        console.print("  [0] Back")
+        console.print("\n" + "=" * 60)
+        console.print("                     MANAGE USERS")
+        console.print("=" * 60)
+        console.print("  [1] Create User Account")
+        console.print("  [2] View All Users")
+        console.print("  [3] Reset User Password")
+        console.print("  [4] Deactivate User")
+        console.print("  [5] Reactivate User")
+        console.print("  [0] Back to Admin Menu")
+        console.print("-" * 60)
 
-        choice = console.input("\n[bold]Choice:[/bold] ").strip()
+        choice = console.input("Select: ").strip()
 
-        if choice == "0":
-            break
-        elif choice == "1":
-            _list_users()
-        elif choice == "2":
+        if choice == "1":
             _create_user()
+        elif choice == "2":
+            _list_users()
         elif choice == "3":
-            _deactivate_user()
-        elif choice == "4":
-            _reactivate_user()
-        elif choice == "5":
             _reset_password()
+        elif choice == "4":
+            _deactivate_user()
+        elif choice == "5":
+            _reactivate_user()
+        elif choice == "0":
+            break
         else:
             console.print("[red]Invalid choice.[/red]")
 
 
-def _list_users() -> None:
-    try:
-        data = admin_api.list_users()
-        items = data["items"]
-        if not items:
-            console.print("[yellow]No users found.[/yellow]")
-            return
-        table = Table(title=f"Users (total: {data['total']})")
-        table.add_column("ID", style="dim")
-        table.add_column("Username")
-        table.add_column("Full Name")
-        table.add_column("Role")
-        table.add_column("Active")
-        for u in items:
-            table.add_row(
-                str(u["id"]),
-                u["username"],
-                u["full_name"],
-                u["role"],
-                "✓" if u["is_active"] else "✗",
-            )
-        console.print(table)
-    except Exception as exc:
-        console.print(f"[red]Error: {exc}[/red]")
-
-
 def _create_user() -> None:
+    console.print("\n" + "=" * 60)
+    console.print("                  CREATE USER ACCOUNT")
+    console.print("=" * 60)
+    
     username = console.input("Username: ").strip()
     email = console.input("Email: ").strip()
     full_name = console.input("Full Name: ").strip()
-    role = console.input("Role (ADMIN/MANAGER/EMPLOYEE): ").strip().upper()
+    role = console.input("Role [ADMIN | MANAGER | EMPLOYEE]: ").strip().upper()
+
     try:
         data = admin_api.create_user(username, email, full_name, role)
-        console.print(f"[green]User created.[/green] Temp password: [bold]{data['temp_password']}[/bold]")
+        console.print(f"\n[green]User U{data['id']} created successfully![/green]")
+        console.print(f"Temporary Password: [bold]{data['temp_password']}[/bold]")
+        console.print("[yellow]⚠ Please share this password securely with the user.[/yellow]")
+    except Exception as exc:
+        console.print(f"\n[red]Error: {exc}[/red]")
+
+
+def _list_users() -> None:
+    role_filter = None
+    while True:
+        try:
+            data = admin_api.list_users(role=role_filter)
+            items = data.get("items", [])
+            
+            console.print("\n" + "=" * 60)
+            console.print("                     ALL USERS")
+            console.print("=" * 60)
+            console.print(f"{'ID':<4}| {'Username':<15}| {'Role':<12}| Status")
+            console.print("-" * 60)
+            
+            if not items:
+                console.print("No users found.")
+            else:
+                for u in items:
+                    uid = f"U{u['id']}"
+                    uname = u['username'][:15]
+                    role = u['role'][:12]
+                    status = "Active" if u['is_account_enabled'] else "Inact"
+                    console.print(f"{uid:<4}| {uname:<15}| {role:<12}| {status}")
+                    
+            console.print("-" * 60)
+            console.print("Options:")
+            console.print("  [F] Filter by Role    [B] Back to Manage Users")
+            
+            action = console.input("\nSelect: ").strip().upper()
+            if action == "B":
+                break
+            elif action == "F":
+                role_input = console.input(f"Enter Role {_ROLES} or blank to clear: ").strip()
+                if role_input:
+                    role_filter = role_input.upper()
+                else:
+                    role_filter = None
+            else:
+                console.print("[red]Invalid option.[/red]")
+        except Exception as exc:
+            console.print(f"[red]Error: {exc}[/red]")
+            break
+
+
+def _reset_password() -> None:
+    console.print("\n" + "=" * 60)
+    console.print("                  RESET USER PASSWORD")
+    console.print("=" * 60)
+    
+    uid_str = console.input("Enter User ID: ").strip()
+    if uid_str.upper().startswith("U"):
+        uid_str = uid_str[1:]
+        
+    try:
+        user_id = int(uid_str)
+        data = admin_api.reset_password(user_id)
+        console.print(f"[green]Password for User U{user_id} reset successfully![/green]")
+        console.print(f"New Temporary Password: [bold]{data['temp_password']}[/bold]")
+        console.print("[yellow]⚠ User will be forced to change this upon next login.[/yellow]")
     except Exception as exc:
         console.print(f"[red]Error: {exc}[/red]")
 
 
 def _deactivate_user() -> None:
-    uid = console.input("User ID to deactivate: ").strip()
-    try:
-        admin_api.deactivate_user(int(uid))
-        console.print("[green]User deactivated.[/green]")
-    except Exception as exc:
-        console.print(f"[red]Error: {exc}[/red]")
+    console.print("\n" + "=" * 60)
+    console.print("                  DEACTIVATE USER")
+    console.print("=" * 60)
+    
+    uid_str = console.input("Enter User ID to deactivate: ").strip()
+    if uid_str.upper().startswith("U"):
+        uid_str = uid_str[1:]
+        
+    confirm = console.input(f"Are you sure you want to deactivate U{uid_str}? (Y/N): ").strip().upper()
+    if confirm == "Y":
+        try:
+            admin_api.deactivate_user(int(uid_str))
+            console.print(f"[green]User U{uid_str} deactivated successfully.[/green]")
+        except Exception as exc:
+            console.print(f"[red]Error: {exc}[/red]")
+    else:
+        console.print("Operation cancelled.")
 
 
 def _reactivate_user() -> None:
-    uid = console.input("User ID to reactivate: ").strip()
-    try:
-        admin_api.reactivate_user(int(uid))
-        console.print("[green]User reactivated.[/green]")
-    except Exception as exc:
-        console.print(f"[red]Error: {exc}[/red]")
+    console.print("\n" + "=" * 60)
+    console.print("                  REACTIVATE USER")
+    console.print("=" * 60)
 
+    uid_str = console.input("Enter User ID to reactivate: ").strip()
+    if uid_str.upper().startswith("U"):
+        uid_str = uid_str[1:]
 
-def _reset_password() -> None:
-    uid = console.input("User ID for password reset: ").strip()
-    try:
-        data = admin_api.reset_password(int(uid))
-        console.print(f"[green]Password reset.[/green] Temp password: [bold]{data['temp_password']}[/bold]")
-    except Exception as exc:
-        console.print(f"[red]Error: {exc}[/red]")
+    confirm = console.input(f"Reactivate U{uid_str}? (Y/N): ").strip().upper()
+    if confirm == "Y":
+        try:
+            admin_api.reactivate_user(int(uid_str))
+            console.print(f"[green]User U{uid_str} reactivated successfully.[/green]")
+        except Exception as exc:
+            console.print(f"[red]Error: {exc}[/red]")
+    else:
+        console.print("Operation cancelled.")

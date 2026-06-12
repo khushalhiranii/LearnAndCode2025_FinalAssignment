@@ -17,6 +17,13 @@ async def get_user_repository(
     yield SQLAlchemyUserRepository(session)
 
 
+def _role_from_header(authorization: str) -> str:
+    if not authorization.startswith("Bearer "):
+        raise AuthorizationError("Missing or malformed Authorization header.")
+    payload = decode_access_token(authorization.removeprefix("Bearer "))
+    return payload.get("role", "")
+
+
 async def get_current_user(
     authorization: str = Header(..., alias="Authorization"),
     user_repo: SQLAlchemyUserRepository = Depends(get_user_repository),
@@ -37,43 +44,12 @@ def _require_role(role: Role):
         authorization: str = Header(..., alias="Authorization"),
         current_user: User = Depends(get_current_user),
     ) -> User:
-        token = authorization.removeprefix("Bearer ")
-        payload = decode_access_token(token)
-        role_in_token = payload.get("role", "")
-        if role_in_token != role.value:
+        if _role_from_header(authorization) != role.value:
             raise AuthorizationError(f"{role.value.capitalize()} role required.")
         return current_user
     return _dependency
 
 
-async def require_admin(
-    authorization: str = Header(..., alias="Authorization"),
-    current_user: User = Depends(get_current_user),
-) -> User:
-    token = authorization.removeprefix("Bearer ")
-    payload = decode_access_token(token)
-    if payload.get("role") != Role.ADMIN.value:
-        raise AuthorizationError("Admin role required.")
-    return current_user
-
-
-async def require_manager(
-    authorization: str = Header(..., alias="Authorization"),
-    current_user: User = Depends(get_current_user),
-) -> User:
-    token = authorization.removeprefix("Bearer ")
-    payload = decode_access_token(token)
-    if payload.get("role") != Role.MANAGER.value:
-        raise AuthorizationError("Manager role required.")
-    return current_user
-
-
-async def require_employee(
-    authorization: str = Header(..., alias="Authorization"),
-    current_user: User = Depends(get_current_user),
-) -> User:
-    token = authorization.removeprefix("Bearer ")
-    payload = decode_access_token(token)
-    if payload.get("role") != Role.EMPLOYEE.value:
-        raise AuthorizationError("Employee role required.")
-    return current_user
+require_admin = _require_role(Role.ADMIN)
+require_manager = _require_role(Role.MANAGER)
+require_employee = _require_role(Role.EMPLOYEE)

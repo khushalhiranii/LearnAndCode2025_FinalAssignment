@@ -42,6 +42,7 @@ class EmployeeDashboardRow(BaseModel):
     department: str | None
     total_utilization_percent: int          # 0 = BENCH, >0 = ALLOCATED
     availability_label: str                 # "BENCH" or "ALLOCATED"
+    skills: list[str] = Field(default_factory=list)
     active_allocations: list[AllocationResponse]
 
 

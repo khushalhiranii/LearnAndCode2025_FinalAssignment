@@ -62,6 +62,7 @@ class EmployeeResponse(BaseModel):
     date_of_joining: date | None
     manager_user_id: int | None
     is_available: bool
+    work_status: str | None = None
     created_at: datetime
     updated_at: datetime
 

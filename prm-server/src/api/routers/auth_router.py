@@ -11,16 +11,14 @@ from src.application.dtos.auth_dtos import (
     LoginResponse,
 )
 from src.domain.exceptions import AuthorizationError
-from src.infrastructure.database.engine import get_async_session
-from src.infrastructure.database.repositories.user_repository import SQLAlchemyUserRepository
+from src.infrastructure.unit_of_work import UnitOfWork, get_unit_of_work
 from src.infrastructure.security.jwt_handler import decode_temp_token
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
 
-def _build_use_cases(session: AsyncSession) -> tuple[LoginUseCase, ChangePasswordUseCase]:
-    repo = SQLAlchemyUserRepository(session)
-    return LoginUseCase(repo), ChangePasswordUseCase(repo)
+def _build_use_cases(uow: UnitOfWork) -> tuple[LoginUseCase, ChangePasswordUseCase]:
+    return LoginUseCase(uow.users), ChangePasswordUseCase(uow.users)
 
 
 @router.post(
@@ -31,9 +29,9 @@ def _build_use_cases(session: AsyncSession) -> tuple[LoginUseCase, ChangePasswor
 )
 async def login(
     request: LoginRequest,
-    session: AsyncSession = Depends(get_async_session),
+    uow: UnitOfWork = Depends(get_unit_of_work),
 ) -> LoginResponse | PasswordChangeRequiredResponse:
-    login_uc, _ = _build_use_cases(session)
+    login_uc, _ = _build_use_cases(uow)
     return await login_uc.execute(request)
 
 
@@ -46,11 +44,11 @@ async def login(
 async def change_password(
     request: ChangePasswordRequest,
     authorization: str = Header(..., alias="Authorization"),
-    session: AsyncSession = Depends(get_async_session),
+    uow: UnitOfWork = Depends(get_unit_of_work),
 ) -> ChangePasswordResponse:
     if not authorization.startswith("Bearer "):
         raise AuthorizationError("Missing or malformed Authorization header.")
     token = authorization.removeprefix("Bearer ")
     user_id = decode_temp_token(token)  # validates that this is a temp token, not an access token
-    _, change_uc = _build_use_cases(session)
+    _, change_uc = _build_use_cases(uow)
     return await change_uc.execute(user_id, request)

@@ -20,8 +20,12 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 def get_url() -> str:
-    return os.environ["DATABASE_URL"]
+    return os.environ.get("DATABASE_URL", "sqlite+aiosqlite:///prm.db")
 
 
 def run_migrations_offline() -> None:
@@ -39,14 +43,17 @@ def run_migrations_offline() -> None:
 async def run_migrations_online() -> None:
     """Run migrations against a live async DB connection."""
     connectable = create_async_engine(get_url())
-    async with connectable.connect() as connection:
-        await connection.run_sync(
-            lambda sync_conn: context.configure(
-                connection=sync_conn,
-                target_metadata=target_metadata,
-            )
+    def do_run_migrations(sync_conn):
+        context.configure(
+            connection=sync_conn,
+            target_metadata=target_metadata,
         )
-        await connection.run_sync(lambda _: context.run_migrations())
+        with context.begin_transaction():
+            context.run_migrations()
+
+    async with connectable.connect() as connection:
+        await connection.run_sync(do_run_migrations)
+        await connection.commit()
     await connectable.dispose()
 
 

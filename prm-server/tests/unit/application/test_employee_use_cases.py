@@ -15,7 +15,7 @@ from src.application.dtos.employee_dtos import (
     UpdateEmployeeRequest,
     UpdateSkillRequest,
 )
-from src.domain.entities.employee import Employee
+from src.domain.entities.resource_profile import ResourceProfile
 from src.domain.entities.user import User
 from src.domain.enums import AllocationStatus, ProficiencyLevel, Role
 from src.domain.exceptions import (
@@ -39,10 +39,10 @@ from tests.conftest import (
 def _make_employee(
     user_id: int = 2,
     emp_id: int | None = None,
-    is_active: bool = True,
-) -> Employee:
+    is_available: bool = True,
+) -> ResourceProfile:
     now = datetime.now(timezone.utc)
-    return Employee(
+    return ResourceProfile(
         id=emp_id,
         user_id=user_id,
         full_name="Test Employee",
@@ -51,7 +51,7 @@ def _make_employee(
         designation=None,
         date_of_joining=None,
         manager_user_id=None,
-        is_active=is_active,
+        is_available=is_available,
         created_at=now,
         updated_at=now,
     )
@@ -59,10 +59,9 @@ def _make_employee(
 
 def _make_user(
     user_id: int,
-    role: Role = Role.EMPLOYEE,
     username: str = "emp1",
     email: str = "emp1@example.com",
-    is_active: bool = True,
+    is_account_enabled: bool = True,
 ) -> User:
     now = datetime.now(timezone.utc)
     return User(
@@ -71,8 +70,7 @@ def _make_user(
         email=email,
         username=username,
         password_hash="x",
-        role=role,
-        is_active=is_active,
+        is_account_enabled=is_account_enabled,
         force_password_change=False,
         created_at=now,
         updated_at=now,
@@ -129,9 +127,9 @@ async def test_deactivate_employee_sets_inactive():
     use_case = DeactivateEmployeeUseCase(user_repo, emp_repo, alloc_repo)
     result = await use_case.execute(employee.id, acting_admin_id=admin.id)
 
-    assert result.is_active is False
+    assert result.is_available is False
     stored = await emp_repo.find_by_id(employee.id)
-    assert stored.is_active is False
+    assert stored.is_available is False
 
 
 @pytest.mark.asyncio
@@ -162,8 +160,8 @@ async def test_deactivate_employee_ends_active_allocations():
     target_user = _make_user(2)
     await user_repo.save(target_user)
 
-    alloc1 = make_allocation(allocation_id=1, employee_id=employee.id, project_id=1)
-    alloc2 = make_allocation(allocation_id=2, employee_id=employee.id, project_id=2)
+    alloc1 = make_allocation(allocation_id=1, resource_profile_id=employee.id, project_id=1)
+    alloc2 = make_allocation(allocation_id=2, resource_profile_id=employee.id, project_id=2)
     await alloc_repo.save(alloc1)
     await alloc_repo.save(alloc2)
 
@@ -184,8 +182,9 @@ async def test_assign_manager_sets_manager():
     emp_repo = InMemoryEmployeeRepository()
     user_repo = InMemoryUserRepository()
 
-    manager_user = _make_user(10, role=Role.MANAGER, username="mgr", email="mgr@x.com")
+    manager_user = _make_user(10, username="mgr", email="mgr@x.com")
     await user_repo.save(manager_user)
+    await user_repo.assign_role(10, Role.MANAGER, __import__("datetime").date.today(), None, None)
 
     employee = _make_employee(user_id=2)
     await emp_repo.save(employee)
@@ -216,8 +215,9 @@ async def test_assign_non_manager_role_raises():
     emp_repo = InMemoryEmployeeRepository()
     user_repo = InMemoryUserRepository()
 
-    wrong_role_user = _make_user(10, role=Role.EMPLOYEE, username="emp2", email="emp2@x.com")
+    wrong_role_user = _make_user(10, username="emp2", email="emp2@x.com")
     await user_repo.save(wrong_role_user)
+    await user_repo.assign_role(10, Role.EMPLOYEE, __import__("datetime").date.today(), None, None)
 
     employee = _make_employee(user_id=2)
     await emp_repo.save(employee)
@@ -368,7 +368,7 @@ async def test_list_employees_returns_all():
         await user_repo.save(user)
         await emp_repo.save(_make_employee(user_id=i + 2))
 
-    use_case = ListEmployeesUseCase(user_repo, emp_repo)
+    use_case = ListEmployeesUseCase(user_repo, emp_repo, InMemoryAllocationRepository())
     result = await use_case.execute()
 
     assert result.total == 3

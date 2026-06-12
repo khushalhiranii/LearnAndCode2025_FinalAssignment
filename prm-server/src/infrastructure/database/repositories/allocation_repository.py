@@ -44,6 +44,21 @@ class SQLAlchemyAllocationRepository(IAllocationRepository):
         )
         return [self._to_entity(m) for m in result.scalars().all()]
 
+    async def find_active_by_employee_and_week(
+        self,
+        employee_id: int,
+        week_start: date,
+    ) -> list[Allocation]:
+        result = await self._session.execute(
+            select(AllocationModel).where(
+                AllocationModel.resource_profile_id == employee_id,
+                AllocationModel.status == AllocationStatus.ACTIVE.value,
+                AllocationModel.from_date <= week_start,
+                AllocationModel.to_date >= week_start,
+            )
+        )
+        return [self._to_entity(m) for m in result.scalars().all()]
+
     async def find_by_project(
         self,
         project_id: int,

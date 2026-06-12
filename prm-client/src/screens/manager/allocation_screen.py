@@ -7,6 +7,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from src.api import manager_api
+from src.api import ai_api
 
 console = Console()
 
@@ -30,7 +31,7 @@ def _show_allocations_table(allocations: list) -> None:
         status_color = "green" if a["status"] == "ACTIVE" else "dim"
         table.add_row(
             str(a["id"]),
-            str(a["employee_id"]),
+            str(a["resource_profile_id"]),
             str(a["project_id"]),
             str(a["utilization_percent"]),
             str(a["from_date"]),
@@ -58,16 +59,55 @@ def _show_projects_table(projects: list) -> None:
 
 def _list_allocations() -> None:
     try:
-        allocations = manager_api.list_my_allocations()
-        _show_allocations_table(allocations)
+        # Note: Listing allocations for a manager isn't a direct endpoint right now.
+        # It's better viewed via Dashboard. For now, print a helper.
+        console.print("[dim]Please use the Resource Dashboard to view team allocations.[/dim]")
     except Exception as exc:
         console.print(f"[red]Error: {exc}[/red]")
 
 
 def _list_projects() -> None:
     try:
-        projects = manager_api.list_my_projects()
-        _show_projects_table(projects)
+        response = manager_api.list_projects()
+        if response:
+            _show_projects_table(response["items"])
+    except Exception as exc:
+        console.print(f"[red]Error: {exc}[/red]")
+
+
+def _ai_allocate() -> None:
+    query = console.input("\nDescribe requirement: ").strip()
+    if len(query) < 3:
+        console.print("[red]Query too short.[/red]")
+        return
+    try:
+        console.print("[yellow]Searching...[/yellow]")
+        result = ai_api.skill_match(query)
+        matches = result.get("matches", [])
+        if not matches:
+            console.print("[dim]No matches.[/dim]")
+            return
+        for m in matches:
+            console.print(f"  #{m['rank']} ID={m['resource_profile_id']} {m['full_name']} — {m['reason']}")
+        sel = console.input("\nSelect # (0=cancel): ").strip()
+        if not sel.isdigit() or int(sel) == 0:
+            return
+        match = next((m for m in matches if m["rank"] == int(sel)), None)
+        if not match:
+            console.print("[red]Invalid selection.[/red]")
+            return
+        project_id = int(console.input("Project ID: ").strip())
+        utilization = int(console.input("Utilization %: ").strip())
+        from_date = console.input("From date (YYYY-MM-DD): ").strip()
+        to_date = console.input("To date (YYYY-MM-DD): ").strip()
+        result = manager_api.allocate_employee(
+            employee_id=match["resource_profile_id"],
+            project_id=project_id,
+            utilization_percent=utilization,
+            from_date=from_date,
+            to_date=to_date,
+        )
+        console.print(f"[green]Allocated {match['full_name']} — allocation ID {result['id']}[/green]")
     except Exception as exc:
         console.print(f"[red]Error: {exc}[/red]")
 
@@ -118,8 +158,8 @@ def allocation_screen() -> None:
     """Allocation management sub-menu loop."""
     while True:
         console.print(Panel("[bold cyan]Allocation Management[/bold cyan]"))
-        console.print("  [1] List my allocations")
-        console.print("  [2] Allocate employee to project")
+        console.print("  [1] Find resource using AI (recommended)")
+        console.print("  [2] Allocate employee directly")
         console.print("  [3] End an allocation")
         console.print("  [4] View my projects")
         console.print("  [0] Back")
@@ -127,7 +167,7 @@ def allocation_screen() -> None:
         choice = console.input("\n[bold]Choice:[/bold] ").strip()
 
         if choice == "1":
-            _list_allocations()
+            _ai_allocate()
         elif choice == "2":
             _allocate_employee()
         elif choice == "3":

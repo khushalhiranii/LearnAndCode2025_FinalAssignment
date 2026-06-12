@@ -41,6 +41,7 @@ class ProjectResponse(BaseModel):
     end_date: date | None
     created_at: datetime
     updated_at: datetime
+    health_status: str | None = None
 
 
 class ProjectListResponse(BaseModel):

@@ -24,7 +24,7 @@ def create_user(
 
 def list_users(
     role: str | None = None,
-    is_active: bool | None = None,
+    is_account_enabled: bool | None = None,
     page: int = 1,
     page_size: int = 20,
 ) -> dict:
@@ -32,8 +32,8 @@ def list_users(
     params: dict = {"page": page, "page_size": page_size}
     if role is not None:
         params["role"] = role
-    if is_active is not None:
-        params["is_active"] = str(is_active).lower()
+    if is_account_enabled is not None:
+        params["is_account_enabled"] = str(is_account_enabled).lower()
 
     with get_client() as client:
         resp = client.get(
@@ -91,6 +91,17 @@ def list_employees(
         resp = client.get(
             "/admin/employees",
             params=params,
+            headers={"Authorization": f"Bearer {session.access_token}"},
+        )
+    resp.raise_for_status()
+    return resp.json()["data"]
+
+
+def deactivate_employee(employee_id: int) -> dict:
+    """POST /admin/employees/{id}/deactivate — ends allocations and disables account."""
+    with get_client() as client:
+        resp = client.post(
+            f"/admin/employees/{employee_id}/deactivate",
             headers={"Authorization": f"Bearer {session.access_token}"},
         )
     resp.raise_for_status()
@@ -170,6 +181,19 @@ def add_employee_skill(
         resp = client.post(
             f"/admin/employees/{employee_id}/skills",
             json={"skill_id": skill_id, "proficiency": proficiency},
+            headers={"Authorization": f"Bearer {session.access_token}"},
+        )
+    resp.raise_for_status()
+    return resp.json()["data"]
+
+
+def update_employee_skill(
+    employee_id: int, skill_id: int, proficiency: str
+) -> dict:
+    with get_client() as client:
+        resp = client.patch(
+            f"/admin/employees/{employee_id}/skills/{skill_id}",
+            json={"proficiency": proficiency},
             headers={"Authorization": f"Bearer {session.access_token}"},
         )
     resp.raise_for_status()
@@ -289,3 +313,29 @@ def list_all_allocations(
         )
     resp.raise_for_status()
     return resp.json()
+
+
+# ── System Config API calls (admin) ───────────────────────────────────────────
+
+
+def get_system_config() -> dict:
+    """GET /admin/config — returns current system configuration."""
+    with get_client() as client:
+        resp = client.get(
+            "/admin/config",
+            headers={"Authorization": f"Bearer {session.access_token}"},
+        )
+    resp.raise_for_status()
+    return resp.json()["data"]
+
+
+def update_system_config(payload: dict) -> dict:
+    """PATCH /admin/config — updates system configuration."""
+    with get_client() as client:
+        resp = client.patch(
+            "/admin/config",
+            json=payload,
+            headers={"Authorization": f"Bearer {session.access_token}"},
+        )
+    resp.raise_for_status()
+    return resp.json()["data"]

@@ -30,7 +30,7 @@ async def list_employees(
     current_user: User = Depends(require_admin),
     uow: UnitOfWork = Depends(get_unit_of_work),
 ) -> dict:
-    use_case = ListEmployeesUseCase(uow.users, uow.employees)
+    use_case = ListEmployeesUseCase(uow.users, uow.employees, uow.allocations)
     result = await use_case.execute(
         is_active=is_active, manager_user_id=manager_user_id, page=page, page_size=page_size
     )
@@ -67,7 +67,10 @@ async def assign_manager(
     current_user: User = Depends(require_admin),
     uow: UnitOfWork = Depends(get_unit_of_work),
 ) -> dict:
-    use_case = AssignManagerUseCase(uow.users, uow.employees)
+    from src.infrastructure.database.resource_hierarchy_service import ResourceHierarchyService
+
+    hierarchy = ResourceHierarchyService(uow.session)
+    use_case = AssignManagerUseCase(uow.users, uow.employees, hierarchy)
     result = await use_case.execute(employee_id, request.manager_user_id)
     return {"success": True, "data": result.model_dump()}
 

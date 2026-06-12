@@ -70,6 +70,18 @@ class TestChangePasswordEndpoint:
         assert "access_token" in data
         assert data["role"] == "ADMIN"
 
+        # VERIFICATION: Logging in again with the new password should succeed
+        # and NOT require another password change
+        second_login_resp = await seeded_admin_client.post(
+            "/api/v1/auth/login",
+            json={"username": "admin", "password": "NewAdmin@99"},
+        )
+        assert second_login_resp.status_code == 200
+        second_login_data = second_login_resp.json()
+        assert "access_token" in second_login_data
+        assert "temp_token" not in second_login_data
+        assert second_login_data.get("status") != "PASSWORD_CHANGE_REQUIRED"
+
     async def test_change_password_with_access_token_rejected(
         self, seeded_admin_client: AsyncClient
     ) -> None:

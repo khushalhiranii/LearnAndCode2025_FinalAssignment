@@ -5,16 +5,16 @@ Unit test fixtures use InMemoryUserRepository — no database required.
 Integration test fixtures use a real PostgreSQL instance via TEST_DATABASE_URL.
 """
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 import pytest
 import pytest_asyncio
 
-from src.domain.entities.employee import Employee
+from src.domain.entities.resource_profile import ResourceProfile, ResourceSkill
 from src.domain.entities.allocation import Allocation
 from src.domain.entities.milestone import Milestone
 from src.domain.entities.project import Project
-from src.domain.entities.skill import EmployeeSkill, Skill
+from src.domain.entities.skill import Skill
 from src.domain.entities.user import User
 from src.domain.enums import AllocationStatus, MilestoneStatus, ProficiencyLevel, ProjectStatus, Role
 from src.domain.ports.repositories import (
@@ -38,7 +38,21 @@ class InMemoryUserRepository(IUserRepository):
         self._store: dict[int, User] = {}
         self._by_username: dict[str, int] = {}
         self._by_email: dict[str, int] = {}
+        self._roles: dict[int, Role] = {}
         self._next_id = 1
+
+    async def find_active_role(self, user_id: int) -> Role | None:
+        return self._roles.get(user_id)
+
+    async def assign_role(
+        self,
+        user_id: int,
+        role: Role,
+        from_date: date,
+        granted_by_user_id: int | None,
+        reason: str | None,
+    ) -> None:
+        self._roles[user_id] = role
 
     async def find_by_username(self, username: str) -> User | None:
         uid = self._by_username.get(username)
@@ -72,15 +86,15 @@ class InMemoryUserRepository(IUserRepository):
     async def find_all(
         self,
         role: Role | None = None,
-        is_active: bool | None = None,
+        is_account_enabled: bool | None = None,
         page: int = 1,
         page_size: int = 20,
     ) -> tuple[list[User], int]:
         users = list(self._store.values())
         if role is not None:
-            users = [u for u in users if u.role == role]
-        if is_active is not None:
-            users = [u for u in users if u.is_active == is_active]
+            users = [u for u in users if self._roles.get(u.id) == role]
+        if is_account_enabled is not None:
+            users = [u for u in users if u.is_account_enabled == is_account_enabled]
         total = len(users)
         start = (page - 1) * page_size
         return users[start: start + page_size], total
@@ -89,25 +103,25 @@ class InMemoryUserRepository(IUserRepository):
         uid = self._by_email.get(email)
         return self._store.get(uid) if uid else None
 
-    async def update_active(self, user_id: int, is_active: bool) -> None:
+    async def update_active(self, user_id: int, is_account_enabled: bool) -> None:
         if user_id in self._store:
-            self._store[user_id].is_active = is_active
+            self._store[user_id].is_account_enabled = is_account_enabled
 
 
 class InMemoryEmployeeRepository(IEmployeeRepository):
     """Fake employee repository for unit tests."""
 
     def __init__(self) -> None:
-        self._store: dict[int, Employee] = {}
+        self._store: dict[int, ResourceProfile] = {}
         self._by_user: dict[int, int] = {}
-        self._skills: dict[int, EmployeeSkill] = {}  # employee_skill_id → EmployeeSkill
+        self._skills: dict[int, ResourceSkill] = {}
         self._next_id = 1
         self._next_skill_id = 1
 
-    async def find_by_id(self, employee_id: int) -> Employee | None:
+    async def find_by_id(self, employee_id: int) -> ResourceProfile | None:
         return self._store.get(employee_id)
 
-    async def find_by_user_id(self, user_id: int) -> Employee | None:
+    async def find_by_user_id(self, user_id: int) -> ResourceProfile | None:
         eid = self._by_user.get(user_id)
         return self._store.get(eid) if eid else None
 
@@ -117,17 +131,17 @@ class InMemoryEmployeeRepository(IEmployeeRepository):
         manager_user_id: int | None = None,
         page: int = 1,
         page_size: int = 20,
-    ) -> tuple[list[Employee], int]:
+    ) -> tuple[list[ResourceProfile], int]:
         items = list(self._store.values())
         if is_active is not None:
-            items = [e for e in items if e.is_active == is_active]
+            items = [e for e in items if e.is_available == is_active]
         if manager_user_id is not None:
             items = [e for e in items if e.manager_user_id == manager_user_id]
         total = len(items)
         start = (page - 1) * page_size
         return items[start: start + page_size], total
 
-    async def save(self, employee: Employee) -> Employee:
+    async def save(self, employee: ResourceProfile) -> ResourceProfile:
         if employee.id is None:
             employee.id = self._next_id
             self._next_id += 1
@@ -137,7 +151,7 @@ class InMemoryEmployeeRepository(IEmployeeRepository):
 
     async def update_active(self, employee_id: int, is_active: bool) -> None:
         if employee_id in self._store:
-            self._store[employee_id].is_active = is_active
+            self._store[employee_id].is_available = is_active
 
     async def update_manager(
         self, employee_id: int, manager_user_id: int | None
@@ -145,14 +159,14 @@ class InMemoryEmployeeRepository(IEmployeeRepository):
         if employee_id in self._store:
             self._store[employee_id].manager_user_id = manager_user_id
 
-    async def find_skills(self, employee_id: int) -> list[EmployeeSkill]:
-        return [s for s in self._skills.values() if s.employee_id == employee_id]
+    async def find_skills(self, employee_id: int) -> list[ResourceSkill]:
+        return [s for s in self._skills.values() if s.resource_profile_id == employee_id]
 
     async def find_employee_skill(
         self, employee_id: int, skill_id: int
-    ) -> EmployeeSkill | None:
+    ) -> ResourceSkill | None:
         for s in self._skills.values():
-            if s.employee_id == employee_id and s.skill_id == skill_id:
+            if s.resource_profile_id == employee_id and s.skill_id == skill_id:
                 return s
         return None
 
@@ -161,11 +175,11 @@ class InMemoryEmployeeRepository(IEmployeeRepository):
         employee_id: int,
         skill_id: int,
         proficiency: ProficiencyLevel,
-    ) -> EmployeeSkill:
+    ) -> ResourceSkill:
         now = datetime.now(timezone.utc)
-        emp_skill = EmployeeSkill(
+        emp_skill = ResourceSkill(
             id=self._next_skill_id,
-            employee_id=employee_id,
+            resource_profile_id=employee_id,
             skill_id=skill_id,
             skill_name="",
             proficiency=proficiency,
@@ -185,10 +199,10 @@ class InMemoryEmployeeRepository(IEmployeeRepository):
     async def remove_skill(self, employee_skill_id: int) -> None:
         self._skills.pop(employee_skill_id, None)
 
-    async def find_by_manager(self, manager_user_id: int) -> list[Employee]:
+    async def find_by_manager(self, manager_user_id: int) -> list[ResourceProfile]:
         return [
             e for e in self._store.values()
-            if e.manager_user_id == manager_user_id and e.is_active
+            if e.manager_user_id == manager_user_id and e.is_available
         ]
 
 
@@ -224,7 +238,7 @@ class InMemorySkillRepository(ISkillRepository):
 
 def make_admin_user(
     force_password_change: bool = False,
-    is_active: bool = True,
+    is_account_enabled: bool = True,
     plain_password: str = "Admin@1234",
 ) -> User:
     return User(
@@ -233,8 +247,7 @@ def make_admin_user(
         email="admin@prm.local",
         username="admin",
         password_hash=hash_password(plain_password),
-        role=Role.ADMIN,
-        is_active=is_active,
+        is_account_enabled=is_account_enabled,
         force_password_change=force_password_change,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
@@ -247,7 +260,7 @@ def make_skill(
     category: str = "Technical",
 ) -> Skill:
     now = datetime.now(timezone.utc)
-    return Skill(id=skill_id, name=name, category=category, created_at=now, updated_at=now)
+    return Skill(id=skill_id, name=name, category=category, is_active=True, created_at=now, updated_at=now)
 
 
 # ── fixtures ──────────────────────────────────────────────────────────────────
@@ -399,6 +412,7 @@ def make_milestone(
         due_date=None,
         status=status,
         story_points=story_points,
+        completed_date=None,
         created_at=now,
         updated_at=now,
     )
@@ -429,7 +443,7 @@ class InMemoryAllocationRepository(IAllocationRepository):
     async def find_active_by_employee(self, employee_id: int) -> list[Allocation]:
         return [
             a for a in self._store.values()
-            if a.employee_id == employee_id and a.status == AllocationStatus.ACTIVE
+            if a.resource_profile_id == employee_id and a.status == AllocationStatus.ACTIVE
         ]
 
     async def find_by_project(
@@ -447,10 +461,18 @@ class InMemoryAllocationRepository(IAllocationRepository):
         employee_id: int,
         active_only: bool = False,
     ) -> list[Allocation]:
-        result = [a for a in self._store.values() if a.employee_id == employee_id]
+        result = [a for a in self._store.values() if a.resource_profile_id == employee_id]
         if active_only:
             result = [a for a in result if a.status == AllocationStatus.ACTIVE]
         return result
+
+    async def find_active_by_employee_and_week(self, employee_id: int, week_start) -> list[Allocation]:
+        return [
+            a for a in self._store.values()
+            if a.resource_profile_id == employee_id
+            and a.status == AllocationStatus.ACTIVE
+            and a.from_date <= week_start <= a.to_date
+        ]
 
     async def save(self, allocation: Allocation) -> Allocation:
         if allocation.id is None:
@@ -477,7 +499,7 @@ class InMemoryAllocationRepository(IAllocationRepository):
 
 def make_allocation(
     allocation_id: int = 1,
-    employee_id: int = 10,
+    resource_profile_id: int = 10,
     project_id: int = 1,
     utilization_percent: int = 50,
     status: AllocationStatus = AllocationStatus.ACTIVE,
@@ -486,7 +508,7 @@ def make_allocation(
     now = datetime.now(timezone.utc)
     return Allocation(
         id=allocation_id,
-        employee_id=employee_id,
+        resource_profile_id=resource_profile_id,
         project_id=project_id,
         utilization_percent=utilization_percent,
         from_date=date(2026, 1, 1),
@@ -507,6 +529,7 @@ async def active_admin_user(fake_user_repo: InMemoryUserRepository) -> InMemoryU
     """Repo seeded with an admin whose force_password_change=False."""
     user = make_admin_user(force_password_change=False)
     await fake_user_repo.save(user)
+    await fake_user_repo.assign_role(1, Role.ADMIN, date.today(), None, "test")
     return fake_user_repo
 
 
@@ -515,18 +538,41 @@ async def force_change_admin(fake_user_repo: InMemoryUserRepository) -> InMemory
     """Repo seeded with an admin whose force_password_change=True."""
     user = make_admin_user(force_password_change=True)
     await fake_user_repo.save(user)
+    await fake_user_repo.assign_role(1, Role.ADMIN, date.today(), None, "test")
     return fake_user_repo
 
 
 @pytest_asyncio.fixture
 async def inactive_admin(fake_user_repo: InMemoryUserRepository) -> InMemoryUserRepository:
     """Repo seeded with a deactivated admin."""
-    user = make_admin_user(is_active=False)
+    user = make_admin_user(is_account_enabled=False)
     await fake_user_repo.save(user)
+    await fake_user_repo.assign_role(1, Role.ADMIN, date.today(), None, "test")
     return fake_user_repo
 
 
 # ── Integration test fixtures (real DB) ──────────────────────────────────────
+
+
+async def _reset_db_engine(db_url: str) -> None:
+    """Recreate the SQLAlchemy async engine after migrations (Windows-safe)."""
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+    import src.infrastructure.database.engine as eng_mod
+
+    if eng_mod.engine is not None:
+        await eng_mod.engine.dispose()
+    eng_mod.engine = create_async_engine(
+        db_url,
+        pool_size=10,
+        max_overflow=20,
+        pool_timeout=30,
+        pool_recycle=1800,
+        echo=False,
+    )
+    eng_mod.AsyncSessionFactory = async_sessionmaker(
+        eng_mod.engine, expire_on_commit=False
+    )
 
 
 @pytest_asyncio.fixture
@@ -543,31 +589,28 @@ async def seeded_admin_client():
     import subprocess
 
     from httpx import ASGITransport, AsyncClient
-    from sqlalchemy.ext.asyncio import create_async_engine
-
-    from src.infrastructure.database.engine import Base
-    from src.main import app
     from seeds.seed_admin import seed
+    from seeds.seed_activity_tags import seed as seed_tags
 
     test_db_url = os.environ.get(
         "TEST_DATABASE_URL",
-        "postgresql+asyncpg://prm_user:prm_pass@localhost:5432/prm_db",
+        "postgresql+asyncpg://prm_user:prm_pass@localhost:5435/prm_db",
     )
     os.environ["DATABASE_URL"] = test_db_url
 
-    # Apply migrations
+    subprocess.run(["alembic", "downgrade", "base"], check=False)
     subprocess.run(["alembic", "upgrade", "head"], check=True)
+    await _reset_db_engine(test_db_url)
 
-    # Seed admin
+    from src.main import app
+
     await seed()
+    await seed_tags()
 
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as client:
         yield client
 
-    # Teardown — drop all tables for a clean state next run
-    engine = create_async_engine(test_db_url)
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    await engine.dispose()
+    subprocess.run(["alembic", "downgrade", "base"], check=True)
+    await _reset_db_engine(test_db_url)

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from src.application.dtos.allocation_dtos import (
     AllocateEmployeeRequest,
@@ -23,6 +23,7 @@ from src.domain.ports.repositories import (
     IAllocationRepository,
     IEmployeeRepository,
     IProjectRepository,
+    IUserRepository,
 )
 
 
@@ -33,10 +34,12 @@ class AllocationUseCase:
         allocation_repo: IAllocationRepository,
         employee_repo: IEmployeeRepository,
         project_repo: IProjectRepository,
+        user_repo: IUserRepository,
     ) -> None:
         self._allocations = allocation_repo
         self._employees = employee_repo
         self._projects = project_repo
+        self._users = user_repo
 
     # ── allocate ──────────────────────────────────────────────────────────────
 
@@ -78,11 +81,18 @@ class AllocationUseCase:
                 "You can only allocate to projects you manage."
             )
 
-        # 4. Utilization overlap check
+        # 4. Utilization overlap check (only allocations whose dates overlap)
         active_allocations = await self._allocations.find_active_by_employee(
             request.resource_profile_id
         )
-        current_total = sum(a.utilization_percent for a in active_allocations)
+        overlapping = [
+            a
+            for a in active_allocations
+            if _date_ranges_overlap(
+                a.from_date, a.to_date, request.from_date, request.to_date
+            )
+        ]
+        current_total = sum(a.utilization_percent for a in overlapping)
         if current_total + request.utilization_percent > 100:
             raise AllocationOverlapError(
                 f"Allocation would exceed 100% utilization. "
@@ -121,11 +131,17 @@ class AllocationUseCase:
                 f"Allocation {allocation_id} is already ended."
             )
 
-        # Scope check: confirm resource profile belongs to this manager
+        project = await self._projects.find_by_id(allocation.project_id)
         employee = await self._employees.find_by_id(allocation.resource_profile_id)
-        if employee is None or employee.manager_user_id != manager_user_id:
+        is_team_manager = (
+            employee is not None and employee.manager_user_id == manager_user_id
+        )
+        is_project_owner = (
+            project is not None and project.manager_user_id == manager_user_id
+        )
+        if not (is_team_manager or is_project_owner):
             raise AuthorizationError(
-                "You can only end allocations for employees you manage."
+                "You can only end allocations for your team or projects you own."
             )
 
         await self._allocations.end_allocation(allocation_id, request.ended_at)
@@ -144,6 +160,9 @@ class AllocationUseCase:
         allocated_count = 0
 
         for emp in all_employees:
+            user = await self._users.find_by_id(emp.user_id)
+            full_name = user.full_name if user else ""
+            
             active_allocs = await self._allocations.find_active_by_employee(emp.id)
             total_util = sum(a.utilization_percent for a in active_allocs)
             label = "BENCH" if total_util == 0 else "ALLOCATED"
@@ -152,14 +171,20 @@ class AllocationUseCase:
             else:
                 allocated_count += 1
 
+            emp_skills = await self._employees.find_skills(emp.id)
+            skill_labels = [
+                f"{s.skill_name} ({s.proficiency.value})" for s in emp_skills
+            ]
+
             team_rows.append(
                 EmployeeDashboardRow(
                     resource_profile_id=emp.id,
-                    full_name=emp.full_name,
+                    full_name=full_name,
                     designation=emp.designation,
                     department=emp.department,
                     total_utilization_percent=total_util,
                     availability_label=label,
+                    skills=skill_labels,
                     active_allocations=[_to_allocation_response(a) for a in active_allocs],
                 )
             )
@@ -171,6 +196,12 @@ class AllocationUseCase:
             allocated_count=allocated_count,
             team=team_rows,
         )
+
+
+def _date_ranges_overlap(
+    a_from: date, a_to: date, b_from: date, b_to: date
+) -> bool:
+    return a_from <= b_to and b_from <= a_to
 
 
 def _to_allocation_response(allocation: Allocation) -> AllocationResponse:
