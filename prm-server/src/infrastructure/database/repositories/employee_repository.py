@@ -1,0 +1,200 @@
+from datetime import datetime, timezone
+
+from sqlalchemy import select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.domain.entities.resource_profile import ResourceProfile, ResourceSkill
+from src.domain.entities.skill import Skill
+from src.domain.enums import ProficiencyLevel
+from src.domain.ports.repositories import IEmployeeRepository
+from src.infrastructure.database.models.employee_model import ResourceProfileModel, ResourceSkillModel
+from src.infrastructure.database.models.skill_model import SkillModel
+
+# Backward-compatible alias so any callers that import the old class name still work
+Employee = ResourceProfile
+EmployeeSkill = ResourceSkill
+
+
+class SQLAlchemyEmployeeRepository(IEmployeeRepository):
+
+    def __init__(self, session: AsyncSession) -> None:
+        self._session = session
+
+    # ── private mappers ──────────────────────────────────────────────────────
+
+    @staticmethod
+    def _to_entity(model: ResourceProfileModel) -> ResourceProfile:
+        return ResourceProfile(
+            id=model.id,
+            user_id=model.user_id,
+            full_name="",    # populated by caller from User data when needed
+            email="",        # populated by caller from User data when needed
+            department=model.department,
+            designation=model.designation,
+            date_of_joining=model.date_of_joining,
+            manager_user_id=model.manager_user_id,
+            is_available=model.is_available,
+            created_at=model.created_at,
+            updated_at=model.updated_at,
+        )
+
+    @staticmethod
+    def _skill_to_entity(model: ResourceSkillModel, skill: SkillModel | None = None) -> ResourceSkill:
+        return ResourceSkill(
+            id=model.id,
+            resource_profile_id=model.resource_profile_id,
+            skill_id=model.skill_id,
+            skill_name=skill.name if skill else "",
+            proficiency=ProficiencyLevel(model.proficiency),
+            created_at=model.created_at,
+            updated_at=model.updated_at,
+        )
+
+    # ── IEmployeeRepository ──────────────────────────────────────────────────
+
+    async def find_by_id(self, employee_id: int) -> ResourceProfile | None:
+        result = await self._session.execute(
+            select(ResourceProfileModel).where(ResourceProfileModel.id == employee_id)
+        )
+        model = result.scalar_one_or_none()
+        return self._to_entity(model) if model else None
+
+    async def find_by_user_id(self, user_id: int) -> ResourceProfile | None:
+        result = await self._session.execute(
+            select(ResourceProfileModel).where(ResourceProfileModel.user_id == user_id)
+        )
+        model = result.scalar_one_or_none()
+        return self._to_entity(model) if model else None
+
+    async def find_all(
+        self,
+        is_active: bool | None = None,
+        manager_user_id: int | None = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> tuple[list[ResourceProfile], int]:
+        from sqlalchemy import func
+
+        q = select(ResourceProfileModel)
+        if is_active is not None:
+            q = q.where(ResourceProfileModel.is_available == is_active)
+        if manager_user_id is not None:
+            q = q.where(ResourceProfileModel.manager_user_id == manager_user_id)
+
+        count_result = await self._session.execute(
+            select(func.count()).select_from(q.subquery())
+        )
+        total = count_result.scalar_one()
+
+        q = q.offset((page - 1) * page_size).limit(page_size)
+        rows = (await self._session.execute(q)).scalars().all()
+        return [self._to_entity(m) for m in rows], total
+
+    async def save(self, employee: ResourceProfile) -> ResourceProfile:
+        model = ResourceProfileModel()
+        if employee.id is not None:
+            model.id = employee.id
+        model.user_id = employee.user_id
+        model.department = employee.department
+        model.designation = employee.designation
+        model.date_of_joining = employee.date_of_joining
+        model.manager_user_id = employee.manager_user_id
+        model.is_available = employee.is_available
+        self._session.add(model)
+        await self._session.flush()
+        await self._session.refresh(model)
+        return self._to_entity(model)
+
+    async def update_active(self, employee_id: int, is_active: bool) -> None:
+        await self._session.execute(
+            update(ResourceProfileModel)
+            .where(ResourceProfileModel.id == employee_id)
+            .values(is_available=is_active, updated_at=datetime.now(timezone.utc))
+        )
+
+    async def update_manager(
+        self, employee_id: int, manager_user_id: int | None
+    ) -> None:
+        await self._session.execute(
+            update(ResourceProfileModel)
+            .where(ResourceProfileModel.id == employee_id)
+            .values(manager_user_id=manager_user_id, updated_at=datetime.now(timezone.utc))
+        )
+
+    # ── skills ────────────────────────────────────────────────────────────────
+
+    async def find_skills(self, employee_id: int) -> list[ResourceSkill]:
+        result = await self._session.execute(
+            select(ResourceSkillModel, SkillModel)
+            .join(SkillModel, ResourceSkillModel.skill_id == SkillModel.id)
+            .where(ResourceSkillModel.resource_profile_id == employee_id)
+        )
+        return [
+            self._skill_to_entity(rs_model, skill_model)
+            for rs_model, skill_model in result.all()
+        ]
+
+    async def find_employee_skill(
+        self, employee_id: int, skill_id: int
+    ) -> ResourceSkill | None:
+        result = await self._session.execute(
+            select(ResourceSkillModel, SkillModel)
+            .join(SkillModel, ResourceSkillModel.skill_id == SkillModel.id)
+            .where(
+                ResourceSkillModel.resource_profile_id == employee_id,
+                ResourceSkillModel.skill_id == skill_id,
+            )
+        )
+        row = result.first()
+        if row is None:
+            return None
+        rs_model, skill_model = row
+        return self._skill_to_entity(rs_model, skill_model)
+
+    async def add_skill(
+        self,
+        employee_id: int,
+        skill_id: int,
+        proficiency: ProficiencyLevel,
+    ) -> ResourceSkill:
+        model = ResourceSkillModel()
+        model.resource_profile_id = employee_id
+        model.skill_id = skill_id
+        model.proficiency = proficiency.value
+        self._session.add(model)
+        await self._session.flush()
+        await self._session.refresh(model)
+
+        skill_result = await self._session.execute(
+            select(SkillModel).where(SkillModel.id == skill_id)
+        )
+        skill = skill_result.scalar_one_or_none()
+        return self._skill_to_entity(model, skill)
+
+    async def update_skill_proficiency(
+        self,
+        employee_skill_id: int,
+        proficiency: ProficiencyLevel,
+    ) -> None:
+        await self._session.execute(
+            update(ResourceSkillModel)
+            .where(ResourceSkillModel.id == employee_skill_id)
+            .values(proficiency=proficiency.value, updated_at=datetime.now(timezone.utc))
+        )
+
+    async def remove_skill(self, employee_skill_id: int) -> None:
+        result = await self._session.execute(
+            select(ResourceSkillModel).where(ResourceSkillModel.id == employee_skill_id)
+        )
+        model = result.scalar_one_or_none()
+        if model:
+            await self._session.delete(model)
+
+    async def find_by_manager(self, manager_user_id: int) -> list[ResourceProfile]:
+        result = await self._session.execute(
+            select(ResourceProfileModel).where(
+                ResourceProfileModel.manager_user_id == manager_user_id,
+                ResourceProfileModel.is_available == True,  # noqa: E712
+            )
+        )
+        return [self._to_entity(m) for m in result.scalars().all()]
