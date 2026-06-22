@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,6 +36,9 @@ class SQLAlchemyEmployeeRepository(IEmployeeRepository):
             is_available=model.is_available,
             created_at=model.created_at,
             updated_at=model.updated_at,
+            timesheet_frozen=model.timesheet_frozen,
+            timesheet_frozen_at=model.timesheet_frozen_at,
+            timesheet_frozen_for_week=model.timesheet_frozen_for_week,
         )
 
     @staticmethod
@@ -198,3 +201,21 @@ class SQLAlchemyEmployeeRepository(IEmployeeRepository):
             )
         )
         return [self._to_entity(m) for m in result.scalars().all()]
+
+    async def update_timesheet_freeze(
+        self,
+        employee_id: int,
+        frozen: bool,
+        frozen_at: datetime | None,
+        frozen_for_week: date | None,
+    ) -> None:
+        await self._session.execute(
+            update(ResourceProfileModel)
+            .where(ResourceProfileModel.id == employee_id)
+            .values(
+                timesheet_frozen=frozen,
+                timesheet_frozen_at=frozen_at,
+                timesheet_frozen_for_week=frozen_for_week,
+                updated_at=datetime.now(timezone.utc),
+            )
+        )

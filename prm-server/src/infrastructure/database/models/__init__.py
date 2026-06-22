@@ -22,3 +22,7 @@ from src.infrastructure.database.models.project_health_model import (  # noqa: F
     ProjectHealthSnapshotModel,
     AISuggestionAuditModel,
 )
+from src.infrastructure.database.models.notification_model import (  # noqa: F401
+    NotificationLogModel,
+    TimesheetReminderTrackingModel,
+)

@@ -17,6 +17,9 @@ class ResourceProfile:
     is_available: bool             # HR domain: False = on leave / deactivated
     created_at: datetime
     updated_at: datetime
+    timesheet_frozen: bool = False
+    timesheet_frozen_at: datetime | None = None
+    timesheet_frozen_for_week: date | None = None
 
 
 @dataclass

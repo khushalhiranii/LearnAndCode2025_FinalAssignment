@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from datetime import date
+from datetime import date, datetime
 
+from src.domain.entities.notification import NotificationLog, TimesheetReminderTracking
 from src.domain.entities.allocation import Allocation
 from src.domain.entities.resource_profile import ResourceProfile, ResourceSkill
 from src.domain.entities.milestone import Milestone
@@ -132,6 +133,15 @@ class IEmployeeRepository(ABC):
     async def find_by_manager(self, manager_user_id: int) -> list[ResourceProfile]:
         """Return all active resource profiles whose manager_user_id matches."""
         ...
+
+    @abstractmethod
+    async def update_timesheet_freeze(
+        self,
+        employee_id: int,
+        frozen: bool,
+        frozen_at: datetime | None,
+        frozen_for_week: date | None,
+    ) -> None: ...
 
 
 class ISkillRepository(ABC):
@@ -316,3 +326,28 @@ class IAISuggestionAuditRepository(ABC):
 
     @abstractmethod
     async def save(self, audit: AISuggestionAudit) -> AISuggestionAudit: ...
+
+
+class INotificationRepository(ABC):
+
+    @abstractmethod
+    async def was_sent(
+        self,
+        notification_type: str,
+        recipient_user_id: int,
+        subject_id: int,
+        reference_key: str,
+    ) -> bool: ...
+
+    @abstractmethod
+    async def record_sent(self, log: NotificationLog) -> NotificationLog: ...
+
+    @abstractmethod
+    async def get_reminder_tracking(
+        self, resource_profile_id: int, week_start_date: date
+    ) -> TimesheetReminderTracking | None: ...
+
+    @abstractmethod
+    async def save_reminder_tracking(
+        self, tracking: TimesheetReminderTracking
+    ) -> TimesheetReminderTracking: ...

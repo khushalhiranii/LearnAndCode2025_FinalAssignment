@@ -16,6 +16,7 @@ from src.domain.ports.repositories import (
     IActivityTagRepository,
     IProjectHealthRepository,
     IAISuggestionAuditRepository,
+    INotificationRepository,
 )
 from src.infrastructure.database.engine import AsyncSessionFactory
 from src.infrastructure.database.repositories.allocation_repository import SQLAlchemyAllocationRepository
@@ -32,6 +33,9 @@ from src.infrastructure.database.repositories.timesheet_repository import (
 from src.infrastructure.database.repositories.project_health_repository import (
     SQLAlchemyAISuggestionAuditRepository,
     SQLAlchemyProjectHealthRepository,
+)
+from src.infrastructure.database.repositories.notification_repository import (
+    SQLAlchemyNotificationRepository,
 )
 
 
@@ -51,6 +55,7 @@ class UnitOfWork:
         self.activity_tags: IActivityTagRepository = SQLAlchemyActivityTagRepository(session)
         self.project_health: IProjectHealthRepository = SQLAlchemyProjectHealthRepository(session)
         self.ai_audit: IAISuggestionAuditRepository = SQLAlchemyAISuggestionAuditRepository(session)
+        self.notifications: INotificationRepository = SQLAlchemyNotificationRepository(session)
 
     @property
     def session(self) -> AsyncSession:

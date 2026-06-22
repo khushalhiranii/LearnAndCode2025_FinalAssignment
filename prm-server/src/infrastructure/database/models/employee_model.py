@@ -20,6 +20,11 @@ class ResourceProfileModel(Base):
         BigInteger, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
     is_available: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    timesheet_frozen: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    timesheet_frozen_at: Mapped[datetime | None] = mapped_column(
+        TIMESTAMP(timezone=True), nullable=True
+    )
+    timesheet_frozen_for_week: Mapped[date | None] = mapped_column(Date, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         TIMESTAMP(timezone=True), nullable=False, server_default=text("NOW()")
     )
