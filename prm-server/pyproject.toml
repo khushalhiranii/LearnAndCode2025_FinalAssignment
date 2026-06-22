@@ -30,6 +30,10 @@ dev = [
     "ruff>=0.4",
     "mypy>=1.10",
 ]
+gmail = [
+    "google-auth>=2.29",
+    "google-api-python-client>=2.130",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]

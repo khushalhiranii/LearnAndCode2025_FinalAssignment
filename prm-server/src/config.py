@@ -17,6 +17,23 @@ class Settings(BaseSettings):
     environment: str = "development"
     log_level: str = "INFO"
 
+    # LLM defaults — used when system_config DB values are empty (set in .env)
+    llm_provider: str = "gemma"
+    llm_api_key: str = ""
+    llm_base_url: str = ""
+    llm_model: str = ""
+
+    # Email — console (dev) | gmail (GCP) | smtp
+    email_provider: str = "console"
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "noreply@prm.local"
+    smtp_use_tls: bool = True
+    gmail_sender: str = ""
+    gmail_service_account_file: str = ""
+
     # Admin bootstrap defaults — used only by seed script
     admin_default_username: str = "admin"
     admin_default_password: str = "Admin@1234"
