@@ -28,6 +28,9 @@ from src.domain.exceptions import (
     ProjectNotAllocatedError,
     ProjectNotFoundError,
     SkillNotFoundError,
+    EmailDeliveryError,
+    TimesheetSubmissionFrozenError,
+    TeamQueryParseError,
     UserNotFoundError,
     WeakPasswordError,
 )
@@ -116,6 +119,42 @@ def register_exception_handlers(app: FastAPI) -> None:
             content={
                 "success": False,
                 "error": {"code": "SKILL_NOT_FOUND", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(TeamQueryParseError)
+    async def handle_team_query_parse(
+        request: Request, exc: TeamQueryParseError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "success": False,
+                "error": {"code": "TEAM_QUERY_PARSE_ERROR", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(TimesheetSubmissionFrozenError)
+    async def handle_timesheet_frozen(
+        request: Request, exc: TimesheetSubmissionFrozenError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=403,
+            content={
+                "success": False,
+                "error": {"code": "TIMESHEET_SUBMISSION_FROZEN", "message": str(exc)},
+            },
+        )
+
+    @app.exception_handler(EmailDeliveryError)
+    async def handle_email_delivery(
+        request: Request, exc: EmailDeliveryError
+    ) -> JSONResponse:
+        return JSONResponse(
+            status_code=502,
+            content={
+                "success": False,
+                "error": {"code": "EMAIL_DELIVERY_ERROR", "message": str(exc)},
             },
         )
 

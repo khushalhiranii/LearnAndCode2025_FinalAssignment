@@ -30,3 +30,41 @@ def risk_summary(project_id: int) -> dict:
         )
     resp.raise_for_status()
     return resp.json()
+
+
+def list_skills() -> list[dict]:
+    with get_client() as client:
+        resp = client.get(
+            "/manager/ai/skills",
+            headers={"Authorization": f"Bearer {session.access_token}"},
+        )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def team_builder(roles: list[dict], project_id: int | None = None) -> dict:
+    payload: dict = {"roles": roles}
+    if project_id is not None:
+        payload["project_id"] = project_id
+    with get_client() as client:
+        resp = client.post(
+            "/manager/ai/team-builder",
+            json=payload,
+            headers={"Authorization": f"Bearer {session.access_token}"},
+        )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def team_builder_from_query(query: str, project_id: int | None = None) -> dict:
+    payload: dict = {"query": query}
+    if project_id is not None:
+        payload["project_id"] = project_id
+    with get_client() as client:
+        resp = client.post(
+            "/manager/ai/team-builder-from-query",
+            json=payload,
+            headers={"Authorization": f"Bearer {session.access_token}"},
+        )
+    resp.raise_for_status()
+    return resp.json()

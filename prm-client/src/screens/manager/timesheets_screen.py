@@ -64,6 +64,7 @@ def timesheets_screen() -> None:
         if timesheets:
             console.print("\nOptions:")
             console.print("  [D] View submitted timesheet detail")
+            console.print("  [R] Restore timesheet access for employee (frozen)")
             action = console.input("Select (Enter to continue): ").strip().upper()
             if action == "D":
                 eid = console.input("Employee ID: ").strip()
@@ -74,6 +75,14 @@ def timesheets_screen() -> None:
                     detail = manager_api.get_timesheet_detail(int(eid), week_input)
                     console.print()
                     _show_timesheet_detail(detail)
+            elif action == "R":
+                eid = console.input("Employee ID to restore: ").strip()
+                if eid.isdigit():
+                    try:
+                        result = manager_api.restore_timesheet_access(int(eid))
+                        console.print(f"[green]{result.get('message', 'Restored.')}[/green]")
+                    except Exception as exc:
+                        console.print(f"[red]Error: {exc}[/red]")
     except Exception as exc:
         console.print(f"[red]Error loading timesheets: {exc}[/red]")
     console.input("\nPress Enter to continue...")

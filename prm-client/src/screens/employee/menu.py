@@ -24,6 +24,11 @@ def employee_menu() -> None:
                     f"\n  [bold yellow]⚠ Reminder: Timesheet for week "
                     f"{reminder.get('week_start_date')} has not been submitted.[/bold yellow]"
                 )
+            if reminder.get("timesheet_frozen"):
+                console.print(
+                    "\n  [bold red]Timesheet submission is FROZEN. "
+                    "Contact your manager to restore access.[/bold red]"
+                )
         except Exception:
             pass
         console.print("  [1] Submit Timesheet")

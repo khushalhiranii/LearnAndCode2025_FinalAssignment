@@ -96,3 +96,13 @@ def get_timesheet_detail(resource_profile_id: int, week_start: str) -> dict:
         )
     resp.raise_for_status()
     return resp.json()
+
+
+def restore_timesheet_access(employee_id: int) -> dict:
+    with get_client() as client:
+        resp = client.post(
+            f"/manager/employees/{employee_id}/restore-timesheet-access",
+            headers={"Authorization": f"Bearer {session.access_token}"},
+        )
+    resp.raise_for_status()
+    return resp.json()

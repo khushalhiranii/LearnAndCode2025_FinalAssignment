@@ -54,16 +54,40 @@ python -m src.main
 
 Default admin (change on first login): `admin` / `Admin@1234`
 
-## LLM Configuration (Admin → System Configuration)
+## LLM Configuration
 
-| Key | Default |
+Set in `.env` (server) or **Admin → System Configuration**. Env vars apply when DB values are empty.
+
+| Env var / config key | Purpose |
 |---|---|
-| `llm_provider` | `gemma` |
-| `llm_api_key` | (set via Admin UI) |
-| `llm_base_url` | `http://164.52.211.238/api/generate` |
-| `llm_model` | `gemma3:12b-it-q8_0` |
+| `LLM_PROVIDER` / `llm_provider` | `gemma`, `gemini`, `groq` |
+| `LLM_API_KEY` / `llm_api_key` | API key (required for Gemini/Groq) |
+| `LLM_BASE_URL` / `llm_base_url` | Ollama-compatible endpoint (required for Gemma), e.g. `http://localhost:11434/api/generate` |
+| `LLM_MODEL` / `llm_model` | Model name (required for Gemma), e.g. `gemma2:9b` |
 
-Providers: `gemma`, `gemini`, `groq`
+Example `.env` for local Ollama:
+
+```env
+LLM_BASE_URL=http://localhost:11434/api/generate
+LLM_MODEL=gemma2:9b
+```
+
+## Email Notifications
+
+Set `EMAIL_PROVIDER` in `.env`:
+
+| Provider | Use case |
+|----------|----------|
+| `console` | Development — emails printed to server logs (default) |
+| `smtp` | Production via SMTP (`SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, ...) |
+| `gmail` | GCP Gmail API (`GMAIL_SENDER`, `GMAIL_SERVICE_ACCOUNT_FILE`) |
+
+Install Gmail deps: `pip install -e ".[gmail]"`
+
+**Notification 1 — Timesheet reminders:** Tue/Wed reminders, Thu freeze + email (daily 08:00 job).  
+**Notification 2 — Project at-risk:** Email to manager when health transitions to `AT_RISK` (after health scheduler run).
+
+Manager can restore frozen timesheet access: `POST /manager/employees/{id}/restore-timesheet-access`
 
 ## Background Scheduler
 
