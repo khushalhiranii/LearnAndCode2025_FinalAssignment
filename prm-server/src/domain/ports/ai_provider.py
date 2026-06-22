@@ -30,6 +30,21 @@ class RiskSummaryContext:
     risk_flags: list[str]
 
 
+@dataclass
+class SkillCatalogEntry:
+    skill_id: int
+    name: str
+    category: str
+
+
+@dataclass
+class ParsedTeamRole:
+    role_title: str
+    skill_id: int
+    min_proficiency: str
+    utilization_percent: int = 100
+
+
 class IAIProvider(ABC):
 
     @property
@@ -46,3 +61,10 @@ class IAIProvider(ABC):
 
     @abstractmethod
     async def summarize_risk(self, context: RiskSummaryContext) -> str: ...
+
+    @abstractmethod
+    async def parse_team_requirements(
+        self,
+        query: str,
+        skills: list[SkillCatalogEntry],
+    ) -> list[ParsedTeamRole]: ...

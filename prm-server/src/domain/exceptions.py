@@ -132,3 +132,15 @@ class InvalidActivityTagError(DomainException):
 
 class AIProviderError(DomainException):
     """LLM provider call failed after retries."""
+
+
+class TeamQueryParseError(DomainException):
+    """Could not extract team roles from the natural language query."""
+
+
+class EmailDeliveryError(DomainException):
+    """Email could not be delivered."""
+
+
+class TimesheetSubmissionFrozenError(DomainException):
+    """Employee timesheet submission is frozen until manager restores access."""

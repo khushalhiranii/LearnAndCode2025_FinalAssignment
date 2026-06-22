@@ -65,6 +65,9 @@ class FailingAIProvider(IAIProvider):
     async def summarize_risk(self, context):
         raise RuntimeError("fail")
 
+    async def parse_team_requirements(self, query, skills):
+        raise RuntimeError("fail")
+
 
 @pytest.mark.asyncio
 async def test_skill_match_excludes_over_allocated() -> None:
