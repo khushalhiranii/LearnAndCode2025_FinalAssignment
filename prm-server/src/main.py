@@ -19,6 +19,7 @@ from src.api.routers.employee_self_router import router as employee_self_router
 from src.config import settings
 from src.infrastructure.database.engine import engine, AsyncSessionFactory
 from src.infrastructure.scheduler.scheduler_runner import get_scheduler
+from src.infrastructure.scheduler.daily_notification_scheduler import get_daily_scheduler
 from src.infrastructure.unit_of_work import UnitOfWork
 
 log = structlog.get_logger()
@@ -36,7 +37,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as exc:
         log.warning("scheduler_config_load_failed", error=str(exc))
     get_scheduler().start(interval_minutes=interval)
+    get_daily_scheduler().start()
     yield
+    get_daily_scheduler().stop()
     get_scheduler().stop()
     log.info("server_stopping")
     await engine.dispose()

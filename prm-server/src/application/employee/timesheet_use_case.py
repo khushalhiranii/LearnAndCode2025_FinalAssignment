@@ -24,6 +24,7 @@ from src.domain.exceptions import (
     HoursCapExceededError,
     InvalidActivityTagError,
     ProjectNotAllocatedError,
+    TimesheetSubmissionFrozenError,
 )
 
 
@@ -102,6 +103,10 @@ class EmployeeTimesheetUseCase:
         employee = await self._employees.find_by_user_id(employee_user_id)
         if not employee:
             raise EmployeeNotFoundError("Employee profile not found.")
+        if employee.timesheet_frozen:
+            raise TimesheetSubmissionFrozenError(
+                "Timesheet submission is frozen. Contact your manager to restore access."
+            )
 
         today = date.today()
         if request.week_start_date > today:

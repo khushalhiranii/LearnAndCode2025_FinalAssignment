@@ -205,6 +205,19 @@ class InMemoryEmployeeRepository(IEmployeeRepository):
             if e.manager_user_id == manager_user_id and e.is_available
         ]
 
+    async def update_timesheet_freeze(
+        self,
+        employee_id: int,
+        frozen: bool,
+        frozen_at: datetime | None,
+        frozen_for_week: date | None,
+    ) -> None:
+        if employee_id in self._store:
+            emp = self._store[employee_id]
+            emp.timesheet_frozen = frozen
+            emp.timesheet_frozen_at = frozen_at
+            emp.timesheet_frozen_for_week = frozen_for_week
+
 
 class InMemorySkillRepository(ISkillRepository):
     """Fake skill repository for unit tests."""

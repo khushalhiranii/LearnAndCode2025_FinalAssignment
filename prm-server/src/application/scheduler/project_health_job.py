@@ -31,7 +31,7 @@ class ProjectHealthJob:
         self._health = health_repo
         self._system_config = system_config
 
-    async def run(self) -> int:
+    async def run(self) -> tuple[int, list[int]]:
         today = date.today()
         prior_week = today - __import__("datetime").timedelta(days=today.weekday() + 7)
         config = await self._system_config.get_config()
@@ -41,9 +41,14 @@ class ProjectHealthJob:
             status=ProjectStatus.ACTIVE, page=1, page_size=10000
         )
         count = 0
+        newly_at_risk: list[int] = []
         for project in projects:
             if project.id is None:
                 continue
+            previous = await self._health.find_latest_by_project(project.id)
+            prev_status = (
+                previous.health_status if previous else ProjectHealthStatus.ON_TRACK
+            )
             flags: list[str] = []
             status = ProjectHealthStatus.ON_TRACK
 
@@ -90,4 +95,9 @@ class ProjectHealthJob:
             )
             await self._health.save_snapshot(snapshot)
             count += 1
-        return count
+            if (
+                status == ProjectHealthStatus.AT_RISK
+                and prev_status != ProjectHealthStatus.AT_RISK
+            ):
+                newly_at_risk.append(project.id)
+        return count, newly_at_risk

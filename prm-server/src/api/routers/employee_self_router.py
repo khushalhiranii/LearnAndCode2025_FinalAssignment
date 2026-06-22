@@ -82,4 +82,5 @@ async def missed_timesheet_reminder(
     return {
         "has_missed": has_missed or (has_allocation and ts is None),
         "week_start_date": prior_monday.isoformat(),
+        "timesheet_frozen": employee.timesheet_frozen,
     }

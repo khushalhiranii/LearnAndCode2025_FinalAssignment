@@ -4,9 +4,10 @@ import threading
 import structlog
 
 from src.infrastructure.database.engine import AsyncSessionFactory
+from src.infrastructure.scheduler.daily_notification_scheduler import (
+    run_health_and_at_risk_notifications,
+)
 from src.infrastructure.unit_of_work import UnitOfWork
-from src.application.scheduler.missed_timesheet_job import MissedTimesheetJob
-from src.application.scheduler.project_health_job import ProjectHealthJob
 
 log = structlog.get_logger()
 
@@ -64,19 +65,9 @@ class SchedulerRunner:
     async def _run_jobs(self) -> None:
         async with AsyncSessionFactory() as session:
             uow = UnitOfWork(session)
-            missed_job = MissedTimesheetJob(uow.employees, uow.allocations, uow.timesheets)
-            health_job = ProjectHealthJob(
-                uow.projects,
-                uow.milestones,
-                uow.allocations,
-                uow.timesheets,
-                uow.project_health,
-                uow.system_config,
-            )
-            missed = await missed_job.run()
-            health = await health_job.run()
+            stats = await run_health_and_at_risk_notifications(uow)
             await uow.commit()
-            log.info("scheduler_jobs_complete", missed_timesheets=missed, health_snapshots=health)
+            log.info("scheduler_jobs_complete", **stats)
 
 
 _scheduler: SchedulerRunner | None = None

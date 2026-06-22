@@ -8,6 +8,9 @@ from src.application.dtos.allocation_dtos import (
     ResourceDashboardResponse,
 )
 from src.application.manager.allocation_use_case import AllocationUseCase, _to_allocation_response
+from src.application.manager.restore_timesheet_access_use_case import RestoreTimesheetAccessUseCase
+from src.application.notifications.email_notification_service import EmailNotificationService
+from src.infrastructure.email.email_provider_factory import EmailProviderFactory
 from src.domain.entities.user import User
 from src.infrastructure.unit_of_work import UnitOfWork, get_unit_of_work
 
@@ -63,6 +66,18 @@ async def end_allocation(
 ) -> AllocationResponse:
     use_case = AllocationUseCase(uow.allocations, uow.employees, uow.projects, uow.users)
     return await use_case.end_allocation(current_user.id, allocation_id, request)
+
+
+@router.post("/manager/employees/{employee_id}/restore-timesheet-access")
+async def restore_timesheet_access(
+    employee_id: int,
+    current_user: User = Depends(require_manager),
+    uow: UnitOfWork = Depends(get_unit_of_work),
+) -> dict[str, str]:
+    email = EmailProviderFactory.create()
+    email_svc = EmailNotificationService(email, uow.notifications)
+    use_case = RestoreTimesheetAccessUseCase(uow.employees, uow.users, email_svc)
+    return await use_case.execute(current_user.id, employee_id)  # type: ignore[arg-type]
 
 
 @router.get("/admin/allocations", response_model=list[AllocationResponse], tags=["admin-allocations"])
