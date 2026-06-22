@@ -1,6 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from src.config import settings
 from src.domain.entities.system_config import SystemConfig
 from src.domain.ports.repositories import ISystemConfigRepository
 from src.infrastructure.database.models.system_config_model import SystemConfigModel
@@ -15,12 +16,11 @@ class SQLAlchemySystemConfigRepository(ISystemConfigRepository):
         rows = result.scalars().all()
         config_dict = {row.config_key: row.config_value for row in rows}
         return SystemConfig(
-            llm_provider=config_dict.get("llm_provider", config_dict.get("ai_provider", "gemma")),
-            llm_api_key=config_dict.get("llm_api_key", ""),
-            llm_base_url=config_dict.get(
-                "llm_base_url", "http://164.52.211.238/api/generate"
-            ),
-            llm_model=config_dict.get("llm_model", "gemma3:12b-it-q8_0"),
+            llm_provider=config_dict.get("llm_provider", config_dict.get("ai_provider"))
+            or settings.llm_provider,
+            llm_api_key=config_dict.get("llm_api_key") or settings.llm_api_key,
+            llm_base_url=config_dict.get("llm_base_url") or settings.llm_base_url,
+            llm_model=config_dict.get("llm_model") or settings.llm_model,
             scheduler_interval_minutes=int(config_dict.get("scheduler_interval_minutes", "240")),
             max_weekly_hours=int(config_dict.get("max_weekly_hours", "40")),
         )

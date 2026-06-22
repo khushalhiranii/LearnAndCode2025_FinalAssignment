@@ -31,8 +31,8 @@ def upgrade() -> None:
     defaults = [
         ("llm_provider", "gemma"),
         ("llm_api_key", ""),
-        ("llm_base_url", "http://164.52.211.238/api/generate"),
-        ("llm_model", "gemma3:12b-it-q8_0"),
+        ("llm_base_url", ""),
+        ("llm_model", ""),
         ("scheduler_interval_minutes", "240"),
         ("max_weekly_hours", "40"),
     ]

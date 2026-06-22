@@ -6,7 +6,9 @@ import httpx
 from src.domain.exceptions import AIProviderError
 from src.domain.ports.ai_provider import (
     IAIProvider,
+    ParsedTeamRole,
     RiskSummaryContext,
+    SkillCatalogEntry,
     SkillMatchCandidate,
     SkillMatchResult,
 )
@@ -17,8 +19,8 @@ class GemmaAdapter(IAIProvider):
     def __init__(
         self,
         api_key: str,
-        base_url: str = "http://164.52.211.238/api/generate",
-        model: str = "gemma3:12b-it-q8_0",
+        base_url: str,
+        model: str,
         timeout: float = 60.0,
     ) -> None:
         self._api_key = api_key
@@ -59,6 +61,17 @@ class GemmaAdapter(IAIProvider):
     async def summarize_risk(self, context: RiskSummaryContext) -> str:
         prompt = _build_risk_prompt(context)
         return await self._complete(prompt)
+
+    async def parse_team_requirements(
+        self,
+        query: str,
+        skills: list[SkillCatalogEntry],
+    ) -> list[ParsedTeamRole]:
+        if not skills:
+            return []
+        prompt = _build_team_parse_prompt(query, skills)
+        text = await self._complete(prompt)
+        return _parse_team_requirements_response(text, skills)
 
 
 class GeminiAdapter(GemmaAdapter):
@@ -151,6 +164,15 @@ class MockAIProvider(IAIProvider):
             f"Key concerns: {flags}."
         )
 
+    async def parse_team_requirements(
+        self,
+        query: str,
+        skills: list[SkillCatalogEntry],
+    ) -> list[ParsedTeamRole]:
+        from src.application.ai.team_query_parser import parse_team_query_rule_based
+
+        return parse_team_query_rule_based(query, skills)
+
 
 def _build_skill_match_prompt(
     query: str,
@@ -193,6 +215,59 @@ def _build_risk_prompt(context: RiskSummaryContext) -> str:
         f"Resource effort: {json.dumps(context.resource_effort)}\n"
         f"Flags: {context.risk_flags}\n"
     )
+
+
+def _build_team_parse_prompt(query: str, skills: list[SkillCatalogEntry]) -> str:
+    catalog = json.dumps(
+        [{"id": s.skill_id, "name": s.name, "category": s.category} for s in skills]
+    )
+    return (
+        "Extract every distinct team role from the manager's request.\n"
+        f"Request: {query}\n"
+        f"Skill catalog (use only these skill ids): {catalog}\n"
+        "Map senior/lead/principal to ADVANCED, mid/intermediate to INTERMEDIATE, "
+        "junior/entry to BEGINNER, otherwise BEGINNER.\n"
+        "Respond ONLY with a JSON array:\n"
+        '[{"role_title": "string", "skill_id": int, '
+        '"min_proficiency": "BEGINNER|INTERMEDIATE|ADVANCED", '
+        '"utilization_percent": 100}]\n'
+    )
+
+
+def _parse_team_requirements_response(
+    text: str,
+    skills: list[SkillCatalogEntry],
+) -> list[ParsedTeamRole]:
+    valid_ids = {s.skill_id for s in skills}
+    valid_prof = {"BEGINNER", "INTERMEDIATE", "ADVANCED"}
+    match = re.search(r"\[.*\]", text, re.DOTALL)
+    if not match:
+        return []
+    try:
+        items = json.loads(match.group())
+        results: list[ParsedTeamRole] = []
+        used_ids: set[int] = set()
+        for item in items:
+            skill_id = int(item["skill_id"])
+            if skill_id not in valid_ids or skill_id in used_ids:
+                continue
+            prof = str(item.get("min_proficiency", "BEGINNER")).upper()
+            if prof not in valid_prof:
+                prof = "BEGINNER"
+            used_ids.add(skill_id)
+            util = int(item.get("utilization_percent", 100))
+            util = max(1, min(100, util))
+            results.append(
+                ParsedTeamRole(
+                    role_title=str(item.get("role_title", "Role"))[:100],
+                    skill_id=skill_id,
+                    min_proficiency=prof,
+                    utilization_percent=util,
+                )
+            )
+        return results
+    except (json.JSONDecodeError, KeyError, TypeError, ValueError):
+        return []
 
 
 def _parse_skill_match_response(

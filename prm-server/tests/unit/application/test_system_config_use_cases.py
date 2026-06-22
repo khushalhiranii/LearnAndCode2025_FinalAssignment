@@ -12,8 +12,8 @@ class InMemorySystemConfigRepository:
         self._config = SystemConfig(
             llm_provider="gemma",
             llm_api_key="",
-            llm_base_url="http://164.52.211.238/api/generate",
-            llm_model="gemma3:12b-it-q8_0",
+            llm_base_url="http://localhost:11434/api/generate",
+            llm_model="gemma2:9b",
             scheduler_interval_minutes=240,
             max_weekly_hours=40,
         )
